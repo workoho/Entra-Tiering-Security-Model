@@ -1,0 +1,27 @@
+{
+  "folders": [
+    {
+      "path": ".",
+      "name": "Entra Tiering Security Model",
+    },
+    {
+      "path": "../AzAuto-Common-Runbook-FW",
+      "name": "AzAutoFramework",
+    }
+  ],
+  "settings": {
+    // Theme settings
+    "workbench.preferredDarkColorTheme": "Dark Powershell Theme",
+    "workbench.preferredLightColorTheme": "PowerShell ISE",
+
+    // PowerShell settings
+    "powershell.scriptAnalysis.settingsPath": ".vscode/PSScriptAnalyzerSettings.psd1",
+    "powershell.cwd": "Entra Tiering Security Model",
+    "powershell.integratedConsole.showOnStartup": true,
+
+    // Terminal settings
+    "terminal.integrated.defaultProfile.linux": "pwsh",
+    "terminal.integrated.defaultProfile.osx": "pwsh",
+    "terminal.integrated.defaultProfile.windows": "PowerShell",
+  }
+}

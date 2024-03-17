@@ -1,0 +1,61 @@
+{
+	"name": "Entra-Tiering-Security-Model",
+	"image": "ghcr.io/workoho/azauto-common-runbook-fw:latest",
+	"features": {
+		"ghcr.io/devcontainers/features/common-utils:2": {
+			"installZsh": "true",
+			"username": "vscode",
+			"upgradePackages": "true",
+			"nonFreePackages": "true"
+		},
+		"ghcr.io/flexwie/devcontainer-features/op:1": {}
+	},
+
+	"postCreateCommand": "sudo chsh vscode -s \"$(which pwsh)\"",
+
+	// Configure tool-specific properties.
+	"customizations": {
+		// Configure properties specific to VS Code.
+		"vscode": {
+			// Set *default* container specific settings.json values on container create.
+			"settings": { 
+				"terminal.integrated.defaultProfile.linux": "pwsh"
+			},
+
+			// Add the IDs of extensions you want installed when the container is created.
+			"extensions": [
+        // Container development related extensions
+        "ms-vscode-remote.remote-containers",
+        "github.codespaces",
+
+        // Code Editing related extensions
+        "editorconfig.editorconfig",
+
+        // Git related extensions
+        "eamodio.gitlens",
+
+        // GitHub related extensions
+        "ms-vscode.vscode-github-issue-notebooks",
+        "github.vscode-pull-request-github",
+
+        // Markdown related extensions
+        "davidanson.vscode-markdownlint",
+        "yzhang.markdown-all-in-one",
+
+        // PowerShell related extensions
+        "ms-vscode.powershell",
+        "martinfliegner.dark-powershell-theme",
+
+        // Azure related extensions
+        "ms-azuretools.vscode-azureresourcegroups",
+        "ms-azuretools.vscode-azurestorage"
+			]
+		}
+	}
+
+	// Use 'forwardPorts' to make a list of ports inside the container available locally.
+	// "forwardPorts": [],
+
+	// Uncomment to connect as root instead. More info: https://aka.ms/dev-containers-non-root.
+	// "remoteUser": "root"
+}

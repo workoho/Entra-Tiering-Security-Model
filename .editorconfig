@@ -1,0 +1,36 @@
+# EditorConfig is awesome: https://EditorConfig.org
+
+# top-most EditorConfig file
+root = true
+
+# Unix-style newlines with a newline ending every file
+[*]
+end_of_line = lf
+
+# PowerShell files
+[*.{ps1,psd1,psm1,ps1xml,psc1,clixml}]
+end_of_line = crlf
+indent_style = space
+indent_size = 4
+trim_trailing_whitespace = true
+
+# Windows script and batch files
+[*.{cmd,bat}]
+end_of_line = crlf
+indent_style = space
+indent_size = 4
+trim_trailing_whitespace = true
+
+# CSV, Markdown, and Text files
+[*.{csv,md,txt}]
+trim_trailing_whitespace = true
+
+# JSON and XML files
+[*.{json,xml,yml,code-workspace}]
+indent_style = space
+indent_size = 2
+
+# Matches the exact file .editorconfig
+[.editorconfig]
+indent_style = space
+indent_size = 2
