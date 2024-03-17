@@ -5,8 +5,8 @@
 .COMPANYNAME Workoho GmbH
 .COPYRIGHT © 2024 Workoho GmbH
 .TAGS
-.LICENSEURI https://github.com/Workoho/AzAuto-Project.tmpl/LICENSE.txt
-.PROJECTURI https://github.com/Workoho/AzAuto-Project.tmpl
+.LICENSEURI https://github.com/workoho/AzAuto-Project.tmpl/LICENSE.txt
+.PROJECTURI https://github.com/workoho/AzAuto-Project.tmpl
 .ICONURI
 .EXTERNALMODULEDEPENDENCIES
 .REQUIREDSCRIPTS

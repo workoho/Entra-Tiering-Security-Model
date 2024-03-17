@@ -1,5 +1,5 @@
 # Azure Automation Common Runbook Framework
-# https://github.com/Workoho/AzAuto-Common-Runbook-FW
+# https://github.com/workoho/AzAuto-Common-Runbook-FW
 setup/AzAutoFWProject/*
 scripts/AzAutoFWProject/*
 !scripts/AzAutoFWProject/Update-AzAutoFWProject.ps1

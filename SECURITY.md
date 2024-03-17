@@ -11,7 +11,7 @@ If you believe you have found a security vulnerability or would like to suggest 
 **Please do not report security vulnerabilities through public GitHub issues.**
 
 Instead, please report them to the project team by opening a security advisory here:
-https://github.com/Workoho/Entra-Tiering-Security-Model/security/advisories/new
+https://github.com/workoho/Entra-Tiering-Security-Model/security/advisories/new
 
 As an alternative, you may also report them to the Workoho Security Team by email to [secure@workoho.com](mailto:secure@workoho.com). If desired, you may also encrypt your message with our PGP key; please see [Workoho's Security.txt file](https://workoho.com/.well-known/security.txt) for further details.
 

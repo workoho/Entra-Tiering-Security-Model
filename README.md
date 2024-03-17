@@ -24,7 +24,7 @@
 <!-- PROJECT LOGO -->
 <br />
 <div align="center">
-  <a href="https://github.com/Workoho/Entra-Tiering-Security-Model">
+  <a href="https://github.com/workoho/Entra-Tiering-Security-Model">
     <img src="images/logo.svg" alt="Logo" width="180" height="180">
   </a>
 
@@ -33,16 +33,16 @@
   <p align="center">
     Implement a powerful Tiering Security Model in Microsoft Entra for your Cloud Administrator identities using Azure Automation.
     <br />
-    <a href="https://github.com/Workoho/Entra-Tiering-Security-Model/wiki"><strong>Explore the docs »</strong></a>
+    <a href="https://github.com/workoho/Entra-Tiering-Security-Model/wiki"><strong>Explore the docs »</strong></a>
     <br />
 
 [![Open template in GitHub Codespaces](https://img.shields.io/badge/Open%20in-GitHub%20Codespaces-blue?logo=github)](https://codespaces.new/Workoho/Entra-Tiering-Security-Model)
 &nbsp;&nbsp;&nbsp;
 [![View template online in Visual Studio Code](https://img.shields.io/badge/View%20Online%20in-Visual%20Studio%20Code-blue?logo=visual-studio-code)](https://vscode.dev/github/Workoho/Entra-Tiering-Security-Model)
 <br />
-<a href="https://github.com/Workoho/Entra-Tiering-Security-Model/issues/new?labels=bug&template=bug-report---.md">Report Bug</a>
+<a href="https://github.com/workoho/Entra-Tiering-Security-Model/issues/new?labels=bug&template=bug-report---.md">Report Bug</a>
 ·
-<a href="https://github.com/Workoho/Entra-Tiering-Security-Model/issues/new?labels=enhancement&template=feature-request---.md">Request Feature</a>
+<a href="https://github.com/workoho/Entra-Tiering-Security-Model/issues/new?labels=enhancement&template=feature-request---.md">Request Feature</a>
 
   </p>
 </div>
@@ -119,7 +119,7 @@ The following graphic illustrates the lifecycle concept at a high level:
 
 ## Getting Started
 
-The entire setup is fully automatic (thanks to the amazing [Azure Automation Common Runbook Framework](https://github.com/Workoho/AzAuto-Common-Runbook-FW)), but requires some preparation and decision making to start.
+The entire setup is fully automatic (thanks to the amazing [Azure Automation Common Runbook Framework](https://github.com/workoho/AzAuto-Common-Runbook-FW)), but requires some preparation and decision making to start.
 
 [![asciicast](https://asciinema.org/a/646552.svg)](https://asciinema.org/a/646552)
 _Preview of the setup procedure_
@@ -175,7 +175,7 @@ The following steps only need to be performed once to get you started:
    $CORP='CORP'
    mkdir $CORP
    cd $CORP
-   git clone https://github.com/Workoho/Entra-Tiering-Security-Model.git $CORP.Entra-Tiering-Security-Model
+   git clone https://github.com/workoho/Entra-Tiering-Security-Model.git $CORP.Entra-Tiering-Security-Model
    cd $CORP.Entra-Tiering-Security-Model
 
    # Rename the Visual Studio Code workspace
@@ -241,10 +241,12 @@ The following steps only need to be performed once to get you started:
 
       This file typically exists on your local machine only. It may contain parts of the configuration that you consider to be confidential for your company.
 
-      Copy the configuration template from `./config/AzAutoFwProject/AzAutoFWProject.local.psd1.tmpl` to `./config/AzAutoFwProject/AzAutoFWProject.local.psd1`:
+      The `Update-AzAutoFWProject.ps1` script you ran before already should have created a copy for you but you may also do this manually:
+
+      Copy the configuration template from `./config/AzAutoFwProject/AzAutoFWProject.local.template.psd1` to `./config/AzAutoFwProject/AzAutoFWProject.local.psd1`:
 
       ```powershell
-      copy ./config/AzAutoFWProject/AzAutoFWProject.local.psd1.tmpl ./config/AzAutoFWProject/AzAutoFWProject.local.psd1
+      copy ./config/AzAutoFWProject/AzAutoFWProject.local.template.psd1 ./config/AzAutoFWProject/AzAutoFWProject.local.psd1
       ```
 
       Please note that by default, this configuration file is ignored by the Git repository to avoid accidential leaks of potential sensitive information.
@@ -252,6 +254,14 @@ The following steps only need to be performed once to get you started:
    2. Public configuration in `./config/AzAutoFWProject/AzAutoFWProject.psd1`:
 
       This file is part of your Git project repository and subject to tracking of changes. Essential parts of the configuration are done in this file where the general information is not considered a secret and its content is to be shared with everyone with access to your Git repository.
+
+      The `Update-AzAutoFWProject.ps1` script you ran before already should have created a copy for you but you may also do this manually:
+
+      Copy the configuration template from `./config/AzAutoFwProject/AzAutoFWProject.template.psd1` to `./config/AzAutoFwProject/AzAutoFWProject.psd1`:
+
+      ```powershell
+      copy ./config/AzAutoFWProject/AzAutoFWProject.template.psd1 ./config/AzAutoFWProject/AzAutoFWProject.psd1
+      ```
 
    **Important:** Some parts of the configuration may be moved between the two files. However, it is not a general concept and is only supported where it is explicitly explained.
 
@@ -302,6 +312,8 @@ The following steps only need to be performed once to get you started:
      git push
      cd -
      ```
+
+     Attention: Make sure that you are actually adding the `.zip` file, _not_ the plain `.psd1` file (fans using [tab completion](https://learn.microsoft.com/en-us/powershell/scripting/learn/shell/tab-completion) might know what I mean).
 
      Of course, you must remember the password. We recommend using a password manager to generate a long random password.
      If you ever want to use this file on a different machine, you will need this password to unpack the file.
@@ -591,7 +603,7 @@ Distributed under the MIT License. See `LICENSE.txt` for more information.
 
 - Julian Pawlowski - [@jpawlowski](https://github.com/jpawlowski)
 
-Project Link: [https://github.com/Workoho/Entra-Tiering-Security-Model](https://github.com/Workoho/Entra-Tiering-Security-Model)
+Project Link: [https://github.com/workoho/Entra-Tiering-Security-Model](https://github.com/workoho/Entra-Tiering-Security-Model)
 
 <p align="right">(<a href="#readme-top">back to top</a>)</p>
 
@@ -599,17 +611,17 @@ Project Link: [https://github.com/Workoho/Entra-Tiering-Security-Model](https://
 <!-- https://www.markdownguide.org/basic-syntax/#reference-style-links -->
 
 [contributors-shield]: https://img.shields.io/github/contributors/Workoho/Entra-Tiering-Security-Model.svg?style=for-the-badge
-[contributors-url]: https://github.com/Workoho/Entra-Tiering-Security-Model/graphs/contributors
+[contributors-url]: https://github.com/workoho/Entra-Tiering-Security-Model/graphs/contributors
 [forks-shield]: https://img.shields.io/github/forks/Workoho/Entra-Tiering-Security-Model.svg?style=for-the-badge
-[forks-url]: https://github.com/Workoho/Entra-Tiering-Security-Model/network/members
+[forks-url]: https://github.com/workoho/Entra-Tiering-Security-Model/network/members
 [stars-shield]: https://img.shields.io/github/stars/Workoho/Entra-Tiering-Security-Model.svg?style=for-the-badge
-[stars-url]: https://github.com/Workoho/Entra-Tiering-Security-Model/stargazers
+[stars-url]: https://github.com/workoho/Entra-Tiering-Security-Model/stargazers
 [issues-shield]: https://img.shields.io/github/issues/Workoho/Entra-Tiering-Security-Model.svg?style=for-the-badge
-[issues-url]: https://github.com/Workoho/Entra-Tiering-Security-Model/issues
+[issues-url]: https://github.com/workoho/Entra-Tiering-Security-Model/issues
 [license-shield]: https://img.shields.io/github/license/Workoho/Entra-Tiering-Security-Model.svg?style=for-the-badge
-[license-url]: https://github.com/Workoho/Entra-Tiering-Security-Model/blob/master/LICENSE.txt
+[license-url]: https://github.com/workoho/Entra-Tiering-Security-Model/blob/master/LICENSE.txt
 [AzAutoFW]: https://img.shields.io/badge/Azure_Automation_Framework-1F4386?style=for-the-badge&logo=microsoftazure&logoColor=white
-[AzAutoFW-url]: https://github.com/Workoho/AzAuto-Common-Runbook-FW
+[AzAutoFW-url]: https://github.com/workoho/AzAuto-Common-Runbook-FW
 [GitHubCodespaces]: https://img.shields.io/badge/GitHub_Codespaces-09091E?style=for-the-badge&logo=github&logoColor=white
 [GitHubCodespaces-url]: https://github.com/features/codespaces
 [VScode]: https://img.shields.io/badge/Visual_Studio_Code-2C2C32?style=for-the-badge&logo=visualstudiocode&logoColor=3063B4

@@ -5,12 +5,12 @@
 .COMPANYNAME Workoho GmbH
 .COPYRIGHT © 2024 Workoho GmbH
 .TAGS
-.LICENSEURI https://github.com/Workoho/Entra-Tiering-Security-Model/blob/main/LICENSE.txt
-.PROJECTURI https://github.com/Workoho/Entra-Tiering-Security-Model
+.LICENSEURI https://github.com/workoho/Entra-Tiering-Security-Model/blob/main/LICENSE.txt
+.PROJECTURI https://github.com/workoho/Entra-Tiering-Security-Model
 .ICONURI
 .EXTERNALMODULEDEPENDENCIES
 .REQUIREDSCRIPTS
-.EXTERNALSCRIPTDEPENDENCIES https://github.com/Workoho/AzAuto-Common-Runbook-FW
+.EXTERNALSCRIPTDEPENDENCIES https://github.com/workoho/AzAuto-Common-Runbook-FW
 .RELEASENOTES
     2024-01-16 - Initial release.
 #>

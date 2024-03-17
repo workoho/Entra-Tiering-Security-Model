@@ -11,7 +11,7 @@
         GitReference                 = 'ModuleVersion'
 
         # GitRepositoryUrl must be a valid Git repository URL. You likely don't want to change this unless you're forking the framework.
-        GitRepositoryUrl             = 'https://github.com/Workoho/AzAuto-Common-Runbook-FW.git'
+        GitRepositoryUrl             = 'https://github.com/workoho/AzAuto-Common-Runbook-FW.git'
 
         # Files belonging to the framework are usually symlinked to the child project to keep them up to date.
         # On Windows, this requires SeCreateSymbolicLinkPrivilege to be enabled, or manually running the Update-AzAutoFWProjectRunbooks.ps1 script as an administrator.
