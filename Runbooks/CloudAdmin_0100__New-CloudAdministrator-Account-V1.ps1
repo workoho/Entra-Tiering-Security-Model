@@ -1,5 +1,5 @@
 <#PSScriptInfo
-.VERSION 1.0.0
+.VERSION 1.1.0
 .GUID 03b78b5d-1e83-44bc-83ce-a5c0f101461b
 .AUTHOR Julian Pawlowski
 .COMPANYNAME Workoho GmbH
@@ -12,7 +12,7 @@
 .REQUIREDSCRIPTS CloudAdmin_0000__Common_0000__Get-ConfigurationConstants.ps1
 .EXTERNALSCRIPTDEPENDENCIES https://github.com/workoho/AzAuto-Common-Runbook-FW
 .RELEASENOTES
-    2024-01-16 - Initial release.
+    2024-03-18 - Disable mailbox access for dedicated accounts.
 #>
 
 <#
@@ -722,7 +722,7 @@ if (
     }
 ) 1> $null
 
-./Common_0001__Connect-ExchangeOnline.ps1 -Organization $tenantDomain.Name -CommandName Get-EXOMailbox, Get-Mailbox, Set-Mailbox
+./Common_0001__Connect-ExchangeOnline.ps1 -Organization $tenantDomain.Name -CommandName Get-EXOMailbox, Get-Mailbox, Set-Mailbox, Set-CASMailbox
 #endregion ---------------------------------------------------------------------
 
 #region Process Referral User --------------------------------------------------
@@ -2764,6 +2764,45 @@ Function ProcessReferralUser ($ReferralUserId, $LocalUserId, $Tier, $UserPhotoUr
 
     $userExMbObj = Get-Mailbox -Identity $userExObj.Identity
     $UserObj = Get-MgBetaUser -UserId $UserObj.Id -Property $userProperties -ExpandProperty $userExpandPropeties
+    #endregion ---------------------------------------------------------------------
+
+    #region Disable Mailbox Access -------------------------------------------------
+    $params = @{
+        Identity                = $userExObj.Identity
+        ActiveSyncEnabled       = $false
+        ImapEnabled             = $false
+        MacOutlookEnabled       = $false
+        OneWinNativeOutlook     = $false
+        OutlookMobileEnabled    = $false
+        OWAEnabled              = $false
+        OWAforDevicesEnabled    = $false
+        PopEnabled              = $false
+        UniversalOutlookEnabled = $false
+        WarningAction           = 'SilentlyContinue'
+        ErrorAction             = 'Stop'
+        Verbose                 = $false
+    }
+    $nonEwsServicePlans = 'EXCHANGE_S_DESKLESS', 'EXCHANGE_S_FOUNDATION'
+    try {
+        if ((Get-MgBetaUserLicenseDetail -UserId $UserObj.Id).ServicePlans.ServicePlanName -notin $nonEwsServicePlans) {
+            $params.EwsEnabled = $false
+            $params.MAPIEnabled = $false
+        }
+        Set-CASMailbox @params 1> $null
+    }
+    catch {
+        [void] $script:returnError.Add(( ./Common_0000__Write-Error.ps1 @{
+                    Message          = $Error[0].Exception.Message
+                    ErrorId          = '500'
+                    Category         = $Error[0].CategoryInfo.Category
+                    TargetName       = $refUserObj.UserPrincipalName
+                    TargetObject     = $refUserObj.Id
+                    TargetType       = 'UserId'
+                    CategoryActivity = 'Account Provisioning'
+                    CategoryReason   = $Error[0].CategoryInfo.Reason
+                }))
+        return
+    }
     #endregion ---------------------------------------------------------------------
 
     #region Tiering Group Membership Assignment ------------------------------------
