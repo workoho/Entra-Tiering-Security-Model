@@ -1,5 +1,5 @@
 @{
-    ModuleVersion = '1.0.0'     # This is the version of the framework you want to use. Only used if GitReference is set to 'ModuleVersion'.
+    ModuleVersion = '1.1.0'     # This is the version of the framework you want to use. Only used if GitReference is set to 'ModuleVersion'.
     Author        = 'Azure Automation Common Runbook Framework'
     Description   = 'Main configuration file child project using the Azure Automation Common Runbook Framework.'
     PrivateData   = @{
@@ -143,19 +143,19 @@
         AutomationRuntimeEnvironment = @{
 
             # This is the system-generated Runtime Environment name for PowerShell 5.1.
-            'PowerShell-5.1'          = @{
-                Runtime     = @{
+            'PowerShell-5.1' = @{
+                Runtime  = @{
                     Language = 'PowerShell'
                     Version  = '5.1'
                 }
 
-                Packages    = @(
+                Packages = @(
                     # Due to a bug in Azure Automation Runtime Environments, we must install at least
                     # one package via the old method into the default environment
                     # (which is not writeable via GUI anymore, but old API's still make it accessibile for us)
                     @{
                         Name    = 'Microsoft.Graph.Authentication'
-                        Version = '2.15.0'
+                        Version = '2.16.0'
                     }
                 )
             }
@@ -174,7 +174,7 @@
 
             # This is a custom Runtime Environment name for PowerShell 5.1 with Az 8.0.0 and additional modules.
             # This is currently required as Az 11.2.0 does not work correctly in PowerShell 5.1 in Azure Automation.
-            'CloudAdmin-V1' = @{
+            'CloudAdmin-V1'  = @{
                 Description = 'Runtime environment for Cloud Administrator Tiering Automation Runbooks with Az 8.0.0 and additional modules.'
                 Runtime     = @{
                     Language = 'PowerShell'
@@ -190,63 +190,67 @@
                     }
                     @{
                         Name    = 'Microsoft.Graph.Authentication'
-                        Version = '2.15.0'
+                        Version = '2.16.0'
                     }
                     @{
                         Name    = 'Microsoft.Graph.Identity.SignIns'
-                        Version = '2.15.0'
+                        Version = '2.16.0'
                     }
                     @{
                         Name    = 'Microsoft.Graph.Identity.DirectoryManagement'
-                        Version = '2.15.0'
+                        Version = '2.16.0'
+                    }
+                    @{
+                        Name    = 'Microsoft.Graph.ChangeNotifications'
+                        Version = '2.16.0'
                     }
                     @{
                         Name    = 'Microsoft.Graph.Users'
-                        Version = '2.15.0'
+                        Version = '2.16.0'
                     }
                     @{
                         Name    = 'Microsoft.Graph.Users.Actions'
-                        Version = '2.15.0'
+                        Version = '2.16.0'
                     }
                     @{
                         Name    = 'Microsoft.Graph.Users.Functions'
-                        Version = '2.15.0'
+                        Version = '2.16.0'
                     }
                     @{
                         Name    = 'Microsoft.Graph.Groups'
-                        Version = '2.15.0'
+                        Version = '2.16.0'
                     }
                     @{
                         Name    = 'Microsoft.Graph.Applications'
-                        Version = '2.15.0'
+                        Version = '2.16.0'
                     }
                     @{
                         Name    = 'Microsoft.Graph.Beta.Identity.SignIns'
-                        Version = '2.15.0'
+                        Version = '2.16.0'
                     }
                     @{
                         Name    = 'Microsoft.Graph.Beta.Identity.DirectoryManagement'
-                        Version = '2.15.0'
+                        Version = '2.16.0'
                     }
                     @{
                         Name    = 'Microsoft.Graph.Beta.Users'
-                        Version = '2.15.0'
+                        Version = '2.16.0'
                     }
                     @{
                         Name    = 'Microsoft.Graph.Beta.Users.Actions'
-                        Version = '2.15.0'
+                        Version = '2.16.0'
                     }
                     @{
                         Name    = 'Microsoft.Graph.Beta.Users.Functions'
-                        Version = '2.15.0'
+                        Version = '2.16.0'
                     }
                     @{
                         Name    = 'Microsoft.Graph.Beta.Groups'
-                        Version = '2.15.0'
+                        Version = '2.16.0'
                     }
                     @{
                         Name    = 'Microsoft.Graph.Beta.Applications'
-                        Version = '2.15.0'
+                        Version = '2.16.0'
                     }
                     @{
                         Name    = 'ExchangeOnlineManagement'
