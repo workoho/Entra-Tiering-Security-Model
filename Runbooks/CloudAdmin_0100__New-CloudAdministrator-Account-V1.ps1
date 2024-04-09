@@ -1,5 +1,5 @@
 <#PSScriptInfo
-.VERSION 1.1.0
+.VERSION 1.1.1
 .GUID 03b78b5d-1e83-44bc-83ce-a5c0f101461b
 .AUTHOR Julian Pawlowski
 .COMPANYNAME Workoho GmbH
@@ -12,7 +12,8 @@
 .REQUIREDSCRIPTS CloudAdmin_0000__Common_0000__Get-ConfigurationConstants.ps1
 .EXTERNALSCRIPTDEPENDENCIES https://github.com/workoho/AzAuto-Common-Runbook-FW
 .RELEASENOTES
-    2024-03-18 - Disable mailbox access for dedicated accounts.
+    Version 1.1.1 (2024-04-09)
+    - Fix service plan check when disabling mailbox access
 #>
 
 <#
@@ -2784,7 +2785,7 @@ Function ProcessReferralUser ($ReferralUserId, $LocalUserId, $Tier, $UserPhotoUr
     }
     $nonEwsServicePlans = 'EXCHANGE_S_DESKLESS', 'EXCHANGE_S_FOUNDATION'
     try {
-        if ((Get-MgBetaUserLicenseDetail -UserId $UserObj.Id).ServicePlans.ServicePlanName -notin $nonEwsServicePlans) {
+        if (((Get-MgBetaUserLicenseDetail -UserId $UserObj.Id).ServicePlans.ServicePlanName | Where-Object { $nonEwsServicePlans -contains $_ }).Count -eq 0) {
             $params.EwsEnabled = $false
             $params.MAPIEnabled = $false
         }
