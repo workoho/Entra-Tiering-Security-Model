@@ -1,5 +1,5 @@
 @{
-    ModuleVersion = '1.1.0'     # This is the version of the framework you want to use. Only used if GitReference is set to 'ModuleVersion'.
+    ModuleVersion = '1.1.1'     # This is the version of the framework you want to use. Only used if GitReference is set to 'ModuleVersion'.
     Author        = 'Azure Automation Common Runbook Framework'
     Description   = 'Main configuration file child project using the Azure Automation Common Runbook Framework.'
     PrivateData   = @{
@@ -278,6 +278,8 @@
         ManagedIdentity              = @(
 
             # For security reasons, you may also move this to the AzAutoFWProject.local.psd1 file.
+
+            # This is the primary Managed Identity for the Azure Automation Account.
             @{
                 Type           = 'SystemAssigned'  # 'SystemAssigned' or 'UserAssigned'
 
@@ -290,6 +292,11 @@
                             DisplayName      = 'Reader'                                # 'Reader' is the minimum required role for the Automation Account
                             RoleDefinitionId = 'acdd72a7-3385-48ef-bd42-f606fba81ae7'  # RoleDefinitionId is optional, but recommended to ensure the correct role is assigned.
                             Justification    = 'Let the Managed Identity read its own properties and access its own resources.'
+                        }
+                        @{
+                            DisplayName      = 'Automation Operator'                   # 'Automation Operator' is required to read sensitive information, like encrypted Automation Variables
+                            RoleDefinitionId = 'acdd72a7-3385-48ef-bd42-f606fba81ae7'  # RoleDefinitionId is optional, but recommended to ensure the correct role is assigned.
+                            Justification    = 'Let the Managed Identity read sensitive information, like encrypted Automation Variables.'
                         }
                     )
                 }
@@ -416,6 +423,37 @@
                         # }
                     }
                 )
+            }
+
+            # This is a secondary Managed Identity for the Azure Automation Account.
+            @{
+                Type                         = 'UserAssigned'                           # 'SystemAssigned' or 'UserAssigned'
+                ResourceGroupNameReferenceTo = 'AutomationAccount.ResourceGroupName'    # reference to the Automation Account's Resource Group
+                BaseNameReferenceTo          = 'AutomationAccount.Name'                 # reference to the Automation Account's Name
+                NameSuffix                   = '_1'                                     # Suffix to append to the BaseName to create the Managed Identity name
+
+                # Azure role assignments for the Managed Identity.
+                AzureRoles                   = @{
+
+                    # Scope 'self' means the Managed Identity itself.
+                    'self' = @(
+                        @{
+                            DisplayName      = 'Automation Operator'                   # 'Automation Operator' is required to read sensitive information, like encrypted Automation Variables
+                            RoleDefinitionId = 'acdd72a7-3385-48ef-bd42-f606fba81ae7'  # RoleDefinitionId is optional, but recommended to ensure the correct role is assigned.
+                            Justification    = 'Let the Managed Identity read sensitive information, like encrypted Automation Variables.'
+                        }
+                    )
+                }
+
+                # Directory role assignments for the Managed Identity.
+                DirectoryRoles               = @()
+
+                # App registrations and their permissions for the Managed Identity.
+                AppPermissions               = @()
+
+                Tags                         = @{
+                    'AutomationAccountNameReferenceTo' = 'AutomationAccount.Name'
+                }
             }
         )
 
