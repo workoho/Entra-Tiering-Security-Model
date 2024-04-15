@@ -1,5 +1,5 @@
 <#PSScriptInfo
-.VERSION 1.0.0
+.VERSION 1.1.0
 .GUID 42b14e9d-de1d-4a82-ae38-9d8c33dd56fe
 .AUTHOR Julian Pawlowski
 .COMPANYNAME Workoho GmbH
@@ -205,6 +205,24 @@ $Constants = [array] @(
         sourceName    = "AV_CloudAdmin_ReferenceManager"
         mapToVariable = 'ReferenceManager'
         defaultValue  = $false
+    }
+    @{
+        sourceName    = "AV_CloudAdmin_InternalReferenceAccountLastSignInMinDaysBefore"
+        mapToVariable = 'InternalReferenceAccountLastSignInMinDaysBefore'
+        defaultValue  = '14'
+        Regex         = '^-?\d+$'
+    }
+    @{
+        sourceName    = "AV_CloudAdmin_ExternalReferenceAccountLastSignInMinDaysBefore"
+        mapToVariable = 'ExternalReferenceAccountLastSignInMinDaysBefore'
+        defaultValue  = '30'
+        Regex         = '^-?\d+$'
+    }
+    @{
+        sourceName    = "AV_CloudAdmin_EmployeeLeaveDateTimeMinDaysBefore"
+        mapToVariable = 'EmployeeLeaveDateTimeMinDaysBefore'
+        defaultValue  = '45'
+        Regex         = '^-?\d+$'
     }
     @{
         sourceName    = "AV_CloudAdmin_Webhook"

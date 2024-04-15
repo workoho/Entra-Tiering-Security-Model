@@ -1,5 +1,5 @@
 <#PSScriptInfo
-.VERSION 1.1.1
+.VERSION 1.2.0
 .GUID 03b78b5d-1e83-44bc-83ce-a5c0f101461b
 .AUTHOR Julian Pawlowski
 .COMPANYNAME Workoho GmbH
@@ -12,8 +12,10 @@
 .REQUIREDSCRIPTS CloudAdmin_0000__Common_0000__Get-ConfigurationConstants.ps1
 .EXTERNALSCRIPTDEPENDENCIES https://github.com/workoho/AzAuto-Common-Runbook-FW
 .RELEASENOTES
-    Version 1.1.1 (2024-04-09)
-    - Fix service plan check when disabling mailbox access
+    Version 1.2.0 (2024-04-15)
+    - add configuration variable AV_CloudAdmin_InternalReferenceAccountLastSignInMinDaysBefore
+    - add configuration variable AV_CloudAdmin_ExternalReferenceAccountLastSignInMinDaysBefore
+    - add configuration variable EmployeeLeaveDateTimeMinDaysBefore
 #>
 
 <#
@@ -1041,26 +1043,6 @@ Function ProcessReferralUser ($ReferralUserId, $LocalUserId, $Tier, $UserPhotoUr
         return
     }
 
-    #TODO check
-    # if (
-    #     ($refUserObj.UserPrincipalName -match '^A[0-9][A-Z][-_].+@.+$') -or # Tiered admin accounts, e.g. A0C_*, A1L-*, etc.
-    #     ($refUserObj.UserPrincipalName -match '^ADM[CL]?[-_].+@.+$') -or # Non-Tiered admin accounts, e.g. ADM_, ADMC-* etc.
-    #     ($refUserObj.UserPrincipalName -match '^(?:SVCC?_.+|SVC[A-Z0-9]+)@.+$') -or # Service Accounts
-    #     ($refUserObj.UserPrincipalName -match '^(?:Sync_.+|[A-Z]+SyncServiceAccount.*)@.+$')  # Entra Sync Accounts
-    # ) {
-    #     [void] $script:returnError.Add(( ./Common_0000__Write-Error.ps1 @{
-    #         Message          = "${ReferralUserId}: This type of user name can not have a Cloud Administrator account created."
-    #         ErrorId          = '403'
-    #         Category         = 'PermissionDenied'
-    #         TargetName       = $refUserObj.UserPrincipalName
-    #         TargetObject     = $refUserObj.Id
-    #         TargetType       = 'UserId'
-    #         CategoryActivity = 'ReferralUserId user validation'
-    #         CategoryReason   = 'Referral User ID is listed as not capable of having a Cloud Administrator account.'
-    #     }))
-    #     return
-    # }
-
     if ([string]::IsNullOrEmpty($refUserObj.DisplayName)) {
         [void] $script:returnError.Add(( ./Common_0000__Write-Error.ps1 @{
                     Message          = "${ReferralUserId}: Referral User ID must have display name set."
@@ -1092,19 +1074,21 @@ Function ProcessReferralUser ($ReferralUserId, $LocalUserId, $Tier, $UserPhotoUr
         return
     }
 
+    if ($EmployeeLeaveDateTimeMinDaysBefore -gt 0) { $EmployeeLeaveDateTimeMinDaysBefore = $EmployeeLeaveDateTimeMinDaysBefore * -1 }
     if (
+        ($EmployeeLeaveDateTimeMinDaysBefore -ne 0) -and
         ($null -ne $refUserObj.EmployeeLeaveDateTime) -and
-        ($return.Job.CreationTime -ge $refUserObj.EmployeeLeaveDateTime.AddDays(-45))
+        ($return.Job.CreationTime -ge $refUserObj.EmployeeLeaveDateTime.AddDays($EmployeeLeaveDateTimeMinDaysBefore))
     ) {
         [void] $script:returnError.Add(( ./Common_0000__Write-Error.ps1 @{
-                    Message          = "${ReferralUserId}: Referral User ID is scheduled for deactivation at $($refUserObj.EmployeeLeaveDateTime | Get-Date -Format 'o') Universal Time. A Cloud Administrator account can only be set up a maximum of 45 days before the planned leaving date."
+                    Message          = "${ReferralUserId}: Referral User ID is scheduled for deactivation at $($refUserObj.EmployeeLeaveDateTime | Get-Date -Format 'o') Universal Time. A Cloud Administrator account can only be set up a maximum of $EmployeeLeaveDateTimeMinDaysBefore days before the planned leaving date."
                     ErrorId          = '403'
                     Category         = 'OperationStopped'
                     TargetName       = $refUserObj.UserPrincipalName
                     TargetObject     = $refUserObj.Id
                     TargetType       = 'UserId'
                     CategoryActivity = 'ReferralUserId user validation'
-                    CategoryReason   = "Referral User ID is scheduled for deactivation at $($refUserObj.EmployeeLeaveDateTime | Get-Date -Format 'o') Universal Time. A Cloud Administrator account can only be set up a maximum of 45 days before the planned leaving date."
+                    CategoryReason   = "Referral User ID is scheduled for deactivation at $($refUserObj.EmployeeLeaveDateTime | Get-Date -Format 'o') Universal Time. A Cloud Administrator account can only be set up a maximum of $EmployeeLeaveDateTimeMinDaysBefore days before the planned leaving date."
                 }))
         return
     }
@@ -1287,25 +1271,27 @@ Function ProcessReferralUser ($ReferralUserId, $LocalUserId, $Tier, $UserPhotoUr
             Throw $_
         }
 
+        if ($InternalReferenceAccountLastSignInMinDaysBefore -gt 0) { $InternalReferenceAccountLastSignInMinDaysBefore = $InternalReferenceAccountLastSignInMinDaysBefore * -1 }
         if (
             -Not ($refUserObjSignInActivity) -or
             -Not ($refUserObjSignInActivity.LastSignInDateTime) -or
             -Not ($refUserObjSignInActivity.LastNonInteractiveSignInDateTime) -or
             (
-                ($refUserObjSignInActivity.LastSignInDateTime -lt $return.Job.CreationTime.AddDays(-14)) -and
-                ($refUserObjSignInActivity.LastNonInteractiveSignInDateTime -lt $return.Job.CreationTime.AddDays(-14))
+                ($InternalReferenceAccountLastSignInMinDaysBefore -ne 0) -and
+                ($refUserObjSignInActivity.LastSignInDateTime -lt $return.Job.CreationTime.AddDays($InternalReferenceAccountLastSignInMinDaysBefore)) -and
+                ($refUserObjSignInActivity.LastNonInteractiveSignInDateTime -lt $return.Job.CreationTime.AddDays($InternalReferenceAccountLastSignInMinDaysBefore))
             )
         ) {
             [void] $script:returnError.Add(( ./Common_0000__Write-Error.ps1 @{
-                        Message           = "${ReferralUserId}: Referral User ID must be in active use within the last 14 days."
+                        Message           = "${ReferralUserId}: Referral User ID must be in active use within the last $InternalReferenceAccountLastSignInMinDaysBefore days."
                         ErrorId           = '403'
                         Category          = 'PermissionDenied'
                         TargetName        = $refUserObj.UserPrincipalName
                         TargetObject      = $refUserObj.Id
                         TargetType        = 'UserId'
-                        RecommendedAction = 'Make sure the user as logged in within the last 14 days at least once.'
+                        RecommendedAction = "Make sure the user as logged in within the last $InternalReferenceAccountLastSignInMinDaysBefore days at least once."
                         CategoryActivity  = 'ReferralUserId internal user validation'
-                        CategoryReason    = "Referral User ID must be in active use within the last 14 days."
+                        CategoryReason    = "Referral User ID must be in active use within the last $InternalReferenceAccountLastSignInMinDaysBefore days."
                     }))
             return
         }
@@ -1504,25 +1490,27 @@ Function ProcessReferralUser ($ReferralUserId, $LocalUserId, $Tier, $UserPhotoUr
             Throw $_
         }
 
+        if ($ExternalReferenceAccountLastSignInMinDaysBefore -gt 0) { $ExternalReferenceAccountLastSignInMinDaysBefore = $ExternalReferenceAccountLastSignInMinDaysBefore * -1 }
         if (
             -Not ($refUserObjSignInActivity) -or
             -Not ($refUserObjSignInActivity.LastSignInDateTime) -or
             -Not ($refUserObjSignInActivity.LastNonInteractiveSignInDateTime) -or
             (
-                ($refUserObjSignInActivity.LastSignInDateTime -lt $return.Job.CreationTime.AddDays(-30)) -and
-                ($refUserObjSignInActivity.LastNonInteractiveSignInDateTime -lt $return.Job.CreationTime.AddDays(-30))
+                ($ExternalReferenceAccountLastSignInMinDaysBefore -ne 0) -and
+                ($refUserObjSignInActivity.LastSignInDateTime -lt $return.Job.CreationTime.AddDays($ExternalReferenceAccountLastSignInMinDaysBefore)) -and
+                ($refUserObjSignInActivity.LastNonInteractiveSignInDateTime -lt $return.Job.CreationTime.AddDays($ExternalReferenceAccountLastSignInMinDaysBefore))
             )
         ) {
             [void] $script:returnError.Add(( ./Common_0000__Write-Error.ps1 @{
-                        Message           = "${ReferralUserId}: Referral User ID must be in active use within the last 30 days."
+                        Message           = "${ReferralUserId}: Referral User ID must be in active use within the last $ExternalReferenceAccountLastSignInMinDaysBefore days."
                         ErrorId           = '403'
                         Category          = 'PermissionDenied'
                         TargetName        = $refUserObj.UserPrincipalName
                         TargetObject      = $refUserObj.Id
                         TargetType        = 'UserId'
-                        RecommendedAction = 'Make sure the external user as logged in to the resource tenant within the last 30 days at least once.'
+                        RecommendedAction = "Make sure the external user as logged in to the resource tenant within the last $ExternalReferenceAccountLastSignInMinDaysBefore days at least once."
                         CategoryActivity  = 'ReferralUserId external user validation'
-                        CategoryReason    = "Referral User ID must be in active use within the last 30 days."
+                        CategoryReason    = "Referral User ID must be in active use within the last $ExternalReferenceAccountLastSignInMinDaysBefore days."
                     }))
             return
         }
