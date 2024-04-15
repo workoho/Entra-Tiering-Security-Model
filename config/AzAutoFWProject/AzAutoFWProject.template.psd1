@@ -424,37 +424,6 @@
                     }
                 )
             }
-
-            # This is a secondary Managed Identity for the Azure Automation Account.
-            @{
-                Type                         = 'UserAssigned'                           # 'SystemAssigned' or 'UserAssigned'
-                ResourceGroupNameReferenceTo = 'AutomationAccount.ResourceGroupName'    # reference to the Automation Account's Resource Group
-                BaseNameReferenceTo          = 'AutomationAccount.Name'                 # reference to the Automation Account's Name
-                NameSuffix                   = '_1'                                     # Suffix to append to the BaseName to create the Managed Identity name
-
-                # Azure role assignments for the Managed Identity.
-                AzureRoles                   = @{
-
-                    # Scope 'self' means the Managed Identity itself.
-                    'self' = @(
-                        @{
-                            DisplayName      = 'Automation Operator'                   # 'Automation Operator' is required to read sensitive information, like encrypted Automation Variables
-                            RoleDefinitionId = 'acdd72a7-3385-48ef-bd42-f606fba81ae7'  # RoleDefinitionId is optional, but recommended to ensure the correct role is assigned.
-                            Justification    = 'Let the Managed Identity read sensitive information, like encrypted Automation Variables.'
-                        }
-                    )
-                }
-
-                # Directory role assignments for the Managed Identity.
-                DirectoryRoles               = @()
-
-                # App registrations and their permissions for the Managed Identity.
-                AppPermissions               = @()
-
-                Tags                         = @{
-                    'AutomationAccountNameReferenceTo' = 'AutomationAccount.Name'
-                }
-            }
         )
 
         # Administrative Units you want to create in your Entra ID tenant.
