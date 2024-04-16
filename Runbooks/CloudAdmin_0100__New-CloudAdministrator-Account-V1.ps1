@@ -1490,7 +1490,7 @@ Function ProcessReferralUser ($ReferralUserId, $LocalUserId, $Tier, $UserPhotoUr
             Throw $_
         }
 
-        if ($ExternalReferenceAccountLastSignInMinDaysBefore -gt 0) { [int]$ExternalReferenceAccountLastSignInMinDaysBefore = $ExternalReferenceAccountLastSignInMinDaysBefore * -1 }
+        if ($ExternalReferenceAccountLastSignInMinDaysBefore -gt 0) { $ExternalReferenceAccountLastSignInMinDaysBefore = [int]$ExternalReferenceAccountLastSignInMinDaysBefore * -1 }
         if (
             -Not ($refUserObjSignInActivity) -or
             -Not ($refUserObjSignInActivity.LastSignInDateTime) -or
