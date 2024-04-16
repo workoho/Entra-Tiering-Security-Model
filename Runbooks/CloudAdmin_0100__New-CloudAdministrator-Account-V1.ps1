@@ -15,7 +15,7 @@
     Version 1.2.0 (2024-04-15)
     - add configuration variable AV_CloudAdmin_InternalReferenceAccountLastSignInMinDaysBefore
     - add configuration variable AV_CloudAdmin_ExternalReferenceAccountLastSignInMinDaysBefore
-    - add configuration variable EmployeeLeaveDateTimeMinDaysBefore
+    - add configuration variable AV_CloudAdmin_EmployeeLeaveDateTimeMinDaysBefore
 #>
 
 <#
@@ -1074,7 +1074,7 @@ Function ProcessReferralUser ($ReferralUserId, $LocalUserId, $Tier, $UserPhotoUr
         return
     }
 
-    if ($EmployeeLeaveDateTimeMinDaysBefore -gt 0) { $EmployeeLeaveDateTimeMinDaysBefore = $EmployeeLeaveDateTimeMinDaysBefore * -1 }
+    if ($EmployeeLeaveDateTimeMinDaysBefore -gt 0) { $EmployeeLeaveDateTimeMinDaysBefore = [int]$EmployeeLeaveDateTimeMinDaysBefore * -1 }
     if (
         ($EmployeeLeaveDateTimeMinDaysBefore -ne 0) -and
         ($null -ne $refUserObj.EmployeeLeaveDateTime) -and
@@ -1271,7 +1271,7 @@ Function ProcessReferralUser ($ReferralUserId, $LocalUserId, $Tier, $UserPhotoUr
             Throw $_
         }
 
-        if ($InternalReferenceAccountLastSignInMinDaysBefore -gt 0) { $InternalReferenceAccountLastSignInMinDaysBefore = $InternalReferenceAccountLastSignInMinDaysBefore * -1 }
+        if ($InternalReferenceAccountLastSignInMinDaysBefore -gt 0) { $InternalReferenceAccountLastSignInMinDaysBefore = [int]$InternalReferenceAccountLastSignInMinDaysBefore * -1 }
         if (
             -Not ($refUserObjSignInActivity) -or
             -Not ($refUserObjSignInActivity.LastSignInDateTime) -or
@@ -1490,7 +1490,7 @@ Function ProcessReferralUser ($ReferralUserId, $LocalUserId, $Tier, $UserPhotoUr
             Throw $_
         }
 
-        if ($ExternalReferenceAccountLastSignInMinDaysBefore -gt 0) { $ExternalReferenceAccountLastSignInMinDaysBefore = $ExternalReferenceAccountLastSignInMinDaysBefore * -1 }
+        if ($ExternalReferenceAccountLastSignInMinDaysBefore -gt 0) { [int]$ExternalReferenceAccountLastSignInMinDaysBefore = $ExternalReferenceAccountLastSignInMinDaysBefore * -1 }
         if (
             -Not ($refUserObjSignInActivity) -or
             -Not ($refUserObjSignInActivity.LastSignInDateTime) -or

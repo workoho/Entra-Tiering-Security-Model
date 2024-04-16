@@ -1,5 +1,5 @@
 <#PSScriptInfo
-.VERSION 1.2.0
+.VERSION 1.1.0
 .GUID 42b14e9d-de1d-4a82-ae38-9d8c33dd56fe
 .AUTHOR Julian Pawlowski
 .COMPANYNAME Workoho GmbH
@@ -15,7 +15,7 @@
     Version 1.2.0 (2024-04-15)
     - add configuration variable AV_CloudAdmin_InternalReferenceAccountLastSignInMinDaysBefore
     - add configuration variable AV_CloudAdmin_ExternalReferenceAccountLastSignInMinDaysBefore
-    - add configuration variable EmployeeLeaveDateTimeMinDaysBefore
+    - add configuration variable AV_CloudAdmin_EmployeeLeaveDateTimeMinDaysBefore
 #>
 
 <#
