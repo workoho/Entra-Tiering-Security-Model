@@ -1,5 +1,5 @@
 <#PSScriptInfo
-.VERSION 1.2.0
+.VERSION 1.2.1
 .GUID 03b78b5d-1e83-44bc-83ce-a5c0f101461b
 .AUTHOR Julian Pawlowski
 .COMPANYNAME Workoho GmbH
@@ -12,10 +12,8 @@
 .REQUIREDSCRIPTS CloudAdmin_0000__Common_0000__Get-ConfigurationConstants.ps1
 .EXTERNALSCRIPTDEPENDENCIES https://github.com/workoho/AzAuto-Common-Runbook-FW
 .RELEASENOTES
-    Version 1.2.0 (2024-04-15)
-    - add configuration variable AV_CloudAdmin_InternalReferenceAccountLastSignInMinDaysBefore
-    - add configuration variable AV_CloudAdmin_ExternalReferenceAccountLastSignInMinDaysBefore
-    - add configuration variable AV_CloudAdmin_EmployeeLeaveDateTimeMinDaysBefore
+    Version 1.2.1 (2024-04-17)
+    - add check for IsSMSOTPAuthentication
 #>
 
 <#
@@ -1113,6 +1111,20 @@ Function ProcessReferralUser ($ReferralUserId, $LocalUserId, $Tier, $UserPhotoUr
 
         #region Internal Accounts
         Write-Verbose "[ProcessReferralUserValidation]: - ${ReferralUserId} is classified as internal user"
+
+        if ($refUserTypeDetails.IsSMSOTPAuthentication -ne $false) {
+            [void] $script:returnError.Add(( ./Common_0000__Write-Error.ps1 @{
+                        Message          = "${ReferralUserId}: Referral User ID must not use SMS one-time passcode authentication."
+                        ErrorId          = '403'
+                        Category         = 'PermissionDenied'
+                        TargetName       = $refUserObj.UserPrincipalName
+                        TargetObject     = $refUserObj.Id
+                        TargetType       = 'UserId'
+                        CategoryActivity = 'ReferralUserId internal user validation'
+                        CategoryReason   = 'Referral User ID has defined identity details that indicate SMS one-time passcode authentication.'
+                    }))
+            return
+        }
 
         if (
             ($DedicatedAccount -eq $true) -and
