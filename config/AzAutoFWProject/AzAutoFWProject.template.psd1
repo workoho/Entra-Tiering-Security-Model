@@ -1,5 +1,5 @@
 @{
-    ModuleVersion = '1.1.2'     # This is the version of the framework you want to use. Only used if GitReference is set to 'ModuleVersion'.
+    ModuleVersion = '1.2.0'     # This is the version of the framework you want to use. Only used if GitReference is set to 'ModuleVersion'.
     Author        = 'Azure Automation Common Runbook Framework'
     Description   = 'Main configuration file child project using the Azure Automation Common Runbook Framework.'
     PrivateData   = @{
