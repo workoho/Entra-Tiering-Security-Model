@@ -155,7 +155,7 @@
                     # (which is not writeable via GUI anymore, but old API's still make it accessibile for us)
                     @{
                         Name    = 'Microsoft.Graph.Authentication'
-                        Version = '2.16.0'
+                        Version = '2.19.0'
                     }
                 )
             }
@@ -190,67 +190,67 @@
                     }
                     @{
                         Name    = 'Microsoft.Graph.Authentication'
-                        Version = '2.16.0'
+                        Version = '2.19.0'
                     }
                     @{
                         Name    = 'Microsoft.Graph.Identity.SignIns'
-                        Version = '2.16.0'
+                        Version = '2.19.0'
                     }
                     @{
                         Name    = 'Microsoft.Graph.Identity.DirectoryManagement'
-                        Version = '2.16.0'
+                        Version = '2.19.0'
                     }
                     @{
                         Name    = 'Microsoft.Graph.ChangeNotifications'
-                        Version = '2.16.0'
+                        Version = '2.19.0'
                     }
                     @{
                         Name    = 'Microsoft.Graph.Users'
-                        Version = '2.16.0'
+                        Version = '2.19.0'
                     }
                     @{
                         Name    = 'Microsoft.Graph.Users.Actions'
-                        Version = '2.16.0'
+                        Version = '2.19.0'
                     }
                     @{
                         Name    = 'Microsoft.Graph.Users.Functions'
-                        Version = '2.16.0'
+                        Version = '2.19.0'
                     }
                     @{
                         Name    = 'Microsoft.Graph.Groups'
-                        Version = '2.16.0'
+                        Version = '2.19.0'
                     }
                     @{
                         Name    = 'Microsoft.Graph.Applications'
-                        Version = '2.16.0'
+                        Version = '2.19.0'
                     }
                     @{
                         Name    = 'Microsoft.Graph.Beta.Identity.SignIns'
-                        Version = '2.16.0'
+                        Version = '2.19.0'
                     }
                     @{
                         Name    = 'Microsoft.Graph.Beta.Identity.DirectoryManagement'
-                        Version = '2.16.0'
+                        Version = '2.19.0'
                     }
                     @{
                         Name    = 'Microsoft.Graph.Beta.Users'
-                        Version = '2.16.0'
+                        Version = '2.19.0'
                     }
                     @{
                         Name    = 'Microsoft.Graph.Beta.Users.Actions'
-                        Version = '2.16.0'
+                        Version = '2.19.0'
                     }
                     @{
                         Name    = 'Microsoft.Graph.Beta.Users.Functions'
-                        Version = '2.16.0'
+                        Version = '2.19.0'
                     }
                     @{
                         Name    = 'Microsoft.Graph.Beta.Groups'
-                        Version = '2.16.0'
+                        Version = '2.19.0'
                     }
                     @{
                         Name    = 'Microsoft.Graph.Beta.Applications'
-                        Version = '2.16.0'
+                        Version = '2.19.0'
                     }
                     @{
                         Name    = 'ExchangeOnlineManagement'
