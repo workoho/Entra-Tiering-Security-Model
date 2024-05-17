@@ -1,5 +1,5 @@
 <#PSScriptInfo
-.VERSION 1.2.1
+.VERSION 1.2.2
 .GUID 03b78b5d-1e83-44bc-83ce-a5c0f101461b
 .AUTHOR Julian Pawlowski
 .COMPANYNAME Workoho GmbH
@@ -12,8 +12,8 @@
 .REQUIREDSCRIPTS CloudAdmin_0000__Common_0000__Get-ConfigurationConstants.ps1
 .EXTERNALSCRIPTDEPENDENCIES https://github.com/workoho/AzAuto-Common-Runbook-FW
 .RELEASENOTES
-    Version 1.2.1 (2024-04-17)
-    - add check for IsSMSOTPAuthentication
+    Version 1.2.2 (2024-05-17)
+    - Improved error handling for concurrent job execution.
 #>
 
 <#
@@ -273,8 +273,17 @@ $Constants = ./CloudAdmin_0000__Common_0000__Get-ConfigurationConstants.ps1
 ./Common_0000__Convert-PSEnvToPSScriptVariable.ps1 -Variable $Constants 1> $null
 #endregion ---------------------------------------------------------------------
 
+#region [COMMON] INITIALIZE RETURN VARIABLES -----------------------------------
+$returnOutput = [System.Collections.ArrayList]::new()
+$returnInformation = [System.Collections.ArrayList]::new()
+$returnWarning = [System.Collections.ArrayList]::new()
+$returnError = [System.Collections.ArrayList]::new()
+#endregion ---------------------------------------------------------------------
+
 #region [COMMON] CONCURRENT JOBS -----------------------------------------------
+$concurrentJobsTimeoutError = $false
 if ((./Common_0002__Wait-AzAutomationConcurrentJob.ps1) -ne $true) {
+    $concurrentJobsTimeoutError = $true
     [void] $script:returnError.Add(( ./Common_0000__Write-Error.ps1 @{
                 Message           = "Maximum job runtime was reached."
                 ErrorId           = '504'
@@ -532,10 +541,6 @@ $tenantBranding = Get-MgBetaOrganizationBranding -OrganizationId $tenant.Id
 $persistentError = $false
 $Iteration = 0
 
-$returnOutput = [System.Collections.ArrayList]::new()
-$returnInformation = [System.Collections.ArrayList]::new()
-$returnWarning = [System.Collections.ArrayList]::new()
-$returnError = [System.Collections.ArrayList]::new()
 $return = @{
     Job = ./Common_0003__Get-AzAutomationJobInfo.ps1
 }
@@ -3097,7 +3102,7 @@ if ($LocalUserId.Count -ne $ReferralUserId.Count) { Throw 'ReferralUserId count 
                 $RequestDedicatedAccount[$_] -is [string]
             ) { $RequestDedicatedAccount[$_].Trim() } else { $RequestDedicatedAccount[$_] }
         }
-        $null = $returnOutput.Add((ProcessReferralUser @params))
+        [void] $returnOutput.Add((ProcessReferralUser @params))
     }
 }
 #endregion ---------------------------------------------------------------------
@@ -3121,9 +3126,13 @@ if (
     ($OutText -eq $true) -or
     (($PSBoundParameters.Keys -contains 'OutJson') -and ($OutJson -eq $false)) -or
     (($PSBoundParameters.Keys -contains 'OutObject') -and ($OutObject -eq $false))
-) { return }
+) {
+    if ($concurrentJobsTimeoutError) { Throw 'Concurrent jobs timeout error detected. Please try again later.' }
+    return
+}
 
-if ($OutJson) { ./Common_0000__Write-JsonOutput.ps1 $return; return }
-if ($OutObject -eq $true) { return $return }
+if ($OutJson) { ./Common_0000__Write-JsonOutput.ps1 $return; if ($concurrentJobsTimeoutError) { Throw 'Concurrent jobs timeout error detected. Please try again later.' }; return }
+if ($OutObject -eq $true) { if ($concurrentJobsTimeoutError) { Throw 'Concurrent jobs timeout error detected. Please try again later.' }; return $return }
 if ($VerbosePreference -ne 'Continue') { Write-Output "Success = $($return.Success)" }
+if ($concurrentJobsTimeoutError) { Throw 'Concurrent jobs timeout error detected. Please try again later.' }
 #endregion ---------------------------------------------------------------------
