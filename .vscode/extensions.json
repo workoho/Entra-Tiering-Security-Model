@@ -8,7 +8,9 @@
     "editorconfig.editorconfig",
 
     // Git related extensions
-    "eamodio.gitlens",
+    "mhutchie.git-graph",
+    "donjayamanne.githistory",
+"eamodio.gitlens",
 
     // GitHub related extensions
     "ms-vscode.vscode-github-issue-notebooks",
