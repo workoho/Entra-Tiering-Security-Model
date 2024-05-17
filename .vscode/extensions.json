@@ -13,6 +13,7 @@
     // GitHub related extensions
     "ms-vscode.vscode-github-issue-notebooks",
     "github.vscode-pull-request-github",
+    "bierner.markdown-preview-github-styles",
 
     // Markdown related extensions
     "davidanson.vscode-markdownlint",
