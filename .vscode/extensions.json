@@ -10,7 +10,7 @@
     // Git related extensions
     "mhutchie.git-graph",
     "donjayamanne.githistory",
-"eamodio.gitlens",
+    "eamodio.gitlens",
 
     // GitHub related extensions
     "ms-vscode.vscode-github-issue-notebooks",
