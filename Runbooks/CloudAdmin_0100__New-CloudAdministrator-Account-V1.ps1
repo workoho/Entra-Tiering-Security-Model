@@ -1,5 +1,5 @@
 <#PSScriptInfo
-.VERSION 1.2.2
+.VERSION 1.2.3
 .GUID 03b78b5d-1e83-44bc-83ce-a5c0f101461b
 .AUTHOR Julian Pawlowski
 .COMPANYNAME Workoho GmbH
@@ -12,8 +12,10 @@
 .REQUIREDSCRIPTS CloudAdmin_0000__Common_0000__Get-ConfigurationConstants.ps1
 .EXTERNALSCRIPTDEPENDENCIES https://github.com/workoho/AzAuto-Common-Runbook-FW
 .RELEASENOTES
-    Version 1.2.2 (2024-05-17)
+    Version 1.2.3 (2024-05-17)
     - Improved error handling for concurrent job execution.
+    - Fixed output for total runtime.
+    - Added runtime information for concurrent job execution.
 #>
 
 <#
@@ -282,6 +284,7 @@ $returnError = [System.Collections.ArrayList]::new()
 
 #region [COMMON] CONCURRENT JOBS -----------------------------------------------
 $concurrentJobsTimeoutError = $false
+$return.Job.ConcurrentJobsWaitStartTime = (Get-Date).ToUniversalTime()
 if ((./Common_0002__Wait-AzAutomationConcurrentJob.ps1) -ne $true) {
     $concurrentJobsTimeoutError = $true
     [void] $script:returnError.Add(( ./Common_0000__Write-Error.ps1 @{
@@ -293,6 +296,8 @@ if ((./Common_0002__Wait-AzAutomationConcurrentJob.ps1) -ne $true) {
                 CategoryReason    = "Maximum job runtime was reached."
             }))
 }
+$return.Job.ConcurrentJobsWaitEndTime = (Get-Date).ToUniversalTime()
+$return.Job.ConcurrentJobsTime = $return.Job.ConcurrentJobsWaitEndTime - $return.Job.ConcurrentJobsWaitStartTime
 #endregion ---------------------------------------------------------------------
 
 #region Administrative Unit Validation -----------------------------------------
@@ -3115,9 +3120,10 @@ $return.Error = $returnError
 if ($returnError.Count -eq 0) { $return.Success = $true } else { $return.Success = $false }
 $return.Job.EndTime = (Get-Date).ToUniversalTime()
 $return.Job.Runtime = $return.Job.EndTime - $return.Job.StartTime
-$return.Job.Waittime = $return.Job.CreationTime - $return.Job.StartTime
+$return.Job.Waittime = $return.Job.StartTime - $return.Job.CreationTime
 
 Write-Verbose "Total Waittime: $([math]::Floor($return.Job.Waittime.TotalSeconds)) sec ($([math]::Round($return.Job.Waittime.TotalMinutes, 1)) min)"
+Write-Verbose "Total ConcurrentJobsTime: $([math]::Floor($return.Job.ConcurrentJobsTime.TotalSeconds)) sec ($([math]::Round($return.Job.ConcurrentJobsTime.TotalMinutes, 1)) min)"
 Write-Verbose "Total Runtime: $([math]::Floor($return.Job.Runtime.TotalSeconds)) sec ($([math]::Round($return.Job.Runtime.TotalMinutes, 1)) min)"
 
 if ($Webhook) { ./Common_0000__Submit-Webhook.ps1 -Uri $Webhook -Body $return 1> $null }
