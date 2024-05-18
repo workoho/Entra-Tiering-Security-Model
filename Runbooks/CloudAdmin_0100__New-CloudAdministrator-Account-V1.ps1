@@ -1,5 +1,5 @@
 <#PSScriptInfo
-.VERSION 1.2.4
+.VERSION 1.3.0
 .GUID 03b78b5d-1e83-44bc-83ce-a5c0f101461b
 .AUTHOR Julian Pawlowski
 .COMPANYNAME Workoho GmbH
@@ -12,8 +12,9 @@
 .REQUIREDSCRIPTS CloudAdmin_0000__Common_0000__Get-ConfigurationConstants.ps1
 .EXTERNALSCRIPTDEPENDENCIES https://github.com/workoho/AzAuto-Common-Runbook-FW
 .RELEASENOTES
-    Version 1.2.4 (2024-05-18)
+    Version 1.3.0 (2024-05-18)
     - Fixed output for total runtime.
+    - Removed AccountTypeExtensionAttributeSuffix settings because it cannot be used properly as Microsoft Graph filter.
 #>
 
 <#
@@ -1942,9 +1943,6 @@ Function ProcessReferralUser ($ReferralUserId, $LocalUserId, $Tier, $UserPhotoUr
             $BodyParams.OnPremisesExtensionAttributes.$extAttrAccountType = if (Get-Variable -ValueOnly -Name "AccountTypeExtensionAttributePrefix_Tier$Tier") {
                 (Get-Variable -ValueOnly -Name "AccountTypeExtensionAttributePrefix_Tier$Tier")
             }
-            elseif (Get-Variable -ValueOnly -Name "AccountTypeExtensionAttributeSuffix_Tier$Tier") {
-                (Get-Variable -ValueOnly -Name "AccountTypeExtensionAttributeSuffix_Tier$Tier")
-            }
             else { $null }
         }
         else {
@@ -1958,13 +1956,6 @@ Function ProcessReferralUser ($ReferralUserId, $LocalUserId, $Tier, $UserPhotoUr
                 }
             }
             if ($null -ne $refUserObj.OnPremisesExtensionAttributes.$extAttrAccountType) { $BodyParams.OnPremisesExtensionAttributes.$extAttrAccountType += $refUserObj.OnPremisesExtensionAttributes.$extAttrAccountType }
-            if (Get-Variable -ValueOnly -Name "AccountTypeExtensionAttributeSuffix_Tier$Tier") {
-                Write-Verbose "[ProcessReferralUserDedicatedAccountProperties]: - Adding suffix to property $extAttrAccountType"
-                if (Get-Variable -ValueOnly -Name "AccountTypeExtensionAttributeSuffixSeparator_Tier$Tier") {
-                    $BodyParams.OnPremisesExtensionAttributes.$extAttrAccountType += Get-Variable -ValueOnly -Name "AccountTypeExtensionAttributeSuffixSeparator_Tier$Tier"
-                }
-                $BodyParams.OnPremisesExtensionAttributes.$extAttrAccountType += Get-Variable -ValueOnly -Name "AccountTypeExtensionAttributeSuffix_Tier$Tier"
-            }
         }
     }
 

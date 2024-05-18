@@ -1,5 +1,5 @@
 <#PSScriptInfo
-.VERSION 1.1.0
+.VERSION 1.2.0
 .GUID 42b14e9d-de1d-4a82-ae38-9d8c33dd56fe
 .AUTHOR Julian Pawlowski
 .COMPANYNAME Workoho GmbH
@@ -12,10 +12,8 @@
 .REQUIREDSCRIPTS
 .EXTERNALSCRIPTDEPENDENCIES https://github.com/workoho/AzAuto-Common-Runbook-FW
 .RELEASENOTES
-    Version 1.2.0 (2024-04-15)
-    - add configuration variable AV_CloudAdmin_InternalReferenceAccountLastSignInMinDaysBefore
-    - add configuration variable AV_CloudAdmin_ExternalReferenceAccountLastSignInMinDaysBefore
-    - add configuration variable AV_CloudAdmin_EmployeeLeaveDateTimeMinDaysBefore
+    Version 1.2.0 (2024-05-18)
+    - Removed AccountTypeExtensionAttributeSuffix settings because it cannot be used properly as Microsoft Graph filter.
 #>
 
 <#
@@ -108,12 +106,6 @@
         ...
 
     AV_CloudAdminTier<Tier>_AccountTypeExtensionAttributePrefixSeparator - [String] - Default Value:
-        ...
-
-    AV_CloudAdminTier<Tier>_AccountTypeExtensionAttributeSuffix - [String] - Default Value:
-        ...
-
-    AV_CloudAdminTier<Tier>_AccountTypeExtensionAttributeSuffixSeparator - [String] - Default Value:
         ...
 
     AV_CloudAdminTier<Tier>_UserDisplayNamePrefix - [String] - Default Value:
@@ -369,18 +361,6 @@ $Constants = [array] @(
         Regex         = '^.{1,2}$'
     }
     @{
-        sourceName    = "AV_CloudAdminTier0_AccountTypeExtensionAttributeSuffix"
-        mapToVariable = 'AccountTypeExtensionAttributeSuffix_Tier0'
-        defaultValue  = $null
-        Regex         = '^[^\s].*[^\s]$|^.$'
-    }
-    @{
-        sourceName    = "AV_CloudAdminTier0_AccountTypeExtensionAttributeSuffixSeparator"
-        mapToVariable = 'AccountTypeExtensionAttributeSuffixSeparator_Tier0'
-        defaultValue  = '__'
-        Regex         = '^.{1,2}$'
-    }
-    @{
         sourceName    = "AV_CloudAdminTier0_UserDisplayNamePrefix"
         mapToVariable = 'UserDisplayNamePrefix_Tier0'
         defaultValue  = $null
@@ -593,18 +573,6 @@ $Constants = [array] @(
         Regex         = '^.{1,2}$'
     }
     @{
-        sourceName    = "AV_CloudAdminTier1_AccountTypeExtensionAttributeSuffix"
-        mapToVariable = 'AccountTypeExtensionAttributeSuffix_Tier1'
-        defaultValue  = $null
-        Regex         = '^[^\s].*[^\s]$|^.$'
-    }
-    @{
-        sourceName    = "AV_CloudAdminTier1_AccountTypeExtensionAttributeSuffixSeparator"
-        mapToVariable = 'AccountTypeExtensionAttributeSuffixSeparator_Tier1'
-        defaultValue  = '__'
-        Regex         = '^.{1,2}$'
-    }
-    @{
         sourceName    = "AV_CloudAdminTier1_UserDisplayNamePrefix"
         mapToVariable = 'UserDisplayNamePrefix_Tier1'
         defaultValue  = $null
@@ -813,18 +781,6 @@ $Constants = [array] @(
     @{
         sourceName    = "AV_CloudAdminTier2_AccountTypeExtensionAttributePrefixSeparator"
         mapToVariable = 'AccountTypeExtensionAttributePrefixSeparator_Tier2'
-        defaultValue  = '__'
-        Regex         = '^.{1,2}$'
-    }
-    @{
-        sourceName    = "AV_CloudAdminTier2_AccountTypeExtensionAttributeSuffix"
-        mapToVariable = 'AccountTypeExtensionAttributeSuffix_Tier2'
-        defaultValue  = $null
-        Regex         = '^[^\s].*[^\s]$|^.$'
-    }
-    @{
-        sourceName    = "AV_CloudAdminTier2_AccountTypeExtensionAttributeSuffixSeparator"
-        mapToVariable = 'AccountTypeExtensionAttributeSuffixSeparator_Tier2'
         defaultValue  = '__'
         Regex         = '^.{1,2}$'
     }
