@@ -1,5 +1,5 @@
 <#PSScriptInfo
-.VERSION 1.2.3
+.VERSION 1.2.4
 .GUID 03b78b5d-1e83-44bc-83ce-a5c0f101461b
 .AUTHOR Julian Pawlowski
 .COMPANYNAME Workoho GmbH
@@ -12,10 +12,8 @@
 .REQUIREDSCRIPTS CloudAdmin_0000__Common_0000__Get-ConfigurationConstants.ps1
 .EXTERNALSCRIPTDEPENDENCIES https://github.com/workoho/AzAuto-Common-Runbook-FW
 .RELEASENOTES
-    Version 1.2.3 (2024-05-17)
-    - Improved error handling for concurrent job execution.
+    Version 1.2.4 (2024-05-18)
     - Fixed output for total runtime.
-    - Added runtime information for concurrent job execution.
 #>
 
 <#
@@ -284,7 +282,7 @@ $returnError = [System.Collections.ArrayList]::new()
 
 #region [COMMON] CONCURRENT JOBS -----------------------------------------------
 $concurrentJobsTimeoutError = $false
-$return.Job.ConcurrentJobsWaitStartTime = (Get-Date).ToUniversalTime()
+$ConcurrentJobsWaitStartTime = (Get-Date).ToUniversalTime()
 if ((./Common_0002__Wait-AzAutomationConcurrentJob.ps1) -ne $true) {
     $concurrentJobsTimeoutError = $true
     [void] $script:returnError.Add(( ./Common_0000__Write-Error.ps1 @{
@@ -296,8 +294,8 @@ if ((./Common_0002__Wait-AzAutomationConcurrentJob.ps1) -ne $true) {
                 CategoryReason    = "Maximum job runtime was reached."
             }))
 }
-$return.Job.ConcurrentJobsWaitEndTime = (Get-Date).ToUniversalTime()
-$return.Job.ConcurrentJobsTime = $return.Job.ConcurrentJobsWaitEndTime - $return.Job.ConcurrentJobsWaitStartTime
+$ConcurrentJobsWaitEndTime = (Get-Date).ToUniversalTime()
+$ConcurrentJobsTime = $ConcurrentJobsWaitEndTime - $ConcurrentJobsWaitStartTime
 #endregion ---------------------------------------------------------------------
 
 #region Administrative Unit Validation -----------------------------------------
@@ -549,6 +547,9 @@ $Iteration = 0
 $return = @{
     Job = ./Common_0003__Get-AzAutomationJobInfo.ps1
 }
+if ($ConcurrentJobsWaitStartTime) { $return.Job.ConcurrentJobsWaitStartTime = $ConcurrentJobsWaitStartTime }
+if ($ConcurrentJobsWaitEndTime) { $return.Job.ConcurrentJobsWaitEndTime = $ConcurrentJobsWaitEndTime }
+if ($ConcurrentJobsTime) { $return.Job.ConcurrentJobsTime = $ConcurrentJobsTime }
 if ($JobReference) { $return.Job.Reference = $JobReference }
 #endregion ---------------------------------------------------------------------
 
