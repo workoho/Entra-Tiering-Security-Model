@@ -489,7 +489,7 @@ if ($ReferralUserId) {
             }
 
             if ($null -eq $refUserId) {
-                Write-Warning "$($ReferralUserId[$_]) not found."
+                Write-Warning "ReferralUserId '$($ReferralUserId[$_])' not found."
                 return
             }
 
@@ -551,14 +551,14 @@ else {
 Write-Verbose "[GetCloudAdminAccount]: - Found $($return.Count) dedicated cloud administrator accounts."
 #endregion ---------------------------------------------------------------------
 
-if ($return.Count -eq 0) {
-    Write-Information 'No cloud admin accounts found.' -InformationAction Continue
-}
-
 Get-Variable | Where-Object { $StartupVariables -notcontains $_.Name } | & { process { Remove-Variable -Scope 0 -Name $_.Name -Force -WarningAction SilentlyContinue -ErrorAction SilentlyContinue -Verbose:$false -Debug:$false -Confirm:$false -WhatIf:$false } }        # Delete variables created in this script to free up memory for tiny Azure Automation sandbox
 if ($PSCommandPath) { Write-Verbose "-----END of $((Get-Item $PSCommandPath).Name) ---" }
 
-if ($OutJson) { ./Common_0000__Write-JsonOutput.ps1 $return; return }
-if ($OutText) { $return.userPrincipalName; return }
+if ($OutJson) { if ($return.Count -eq 0) { return '[]' }; ./Common_0000__Write-JsonOutput.ps1 $return; return }
+if ($OutText) { if ($return.Count -eq 0) { return 'No cloud admin accounts found.' }; $return.userPrincipalName; return }
+
+if ($return.Count -eq 0) {
+    Write-Information 'No cloud admin accounts found.' -InformationAction Continue
+}
 
 return $return
