@@ -79,7 +79,7 @@ Param (
     [boolean] $OutText
 )
 
-Write-Verbose "---START of $((Get-Item $PSCommandPath).Name), $((Test-ScriptFileInfo $PSCommandPath | Select-Object -Property Version, Guid | & { process{$_.PSObject.Properties | & { process{$_.Name + ': ' + $_.Value} }} }) -join ', ') ---"
+if ($PSCommandPath) { Write-Verbose "---START of $((Get-Item $PSCommandPath).Name), $((Test-ScriptFileInfo $PSCommandPath | Select-Object -Property Version, Guid | & { process{$_.PSObject.Properties | & { process{$_.Name + ': ' + $_.Value} }} }) -join ', ') ---" }
 $StartupVariables = (Get-Variable | & { process { $_.Name } })      # Remember existing variables so we can cleanup ours at the end of the script
 
 #region [COMMON] PARAMETER VALIDATION ------------------------------------------
@@ -350,7 +350,7 @@ function Invoke-MgGraphRequestWithRetry {
     # Read-only permissions
     'AuditLog.Read.All'
     'Directory.Read.All'
-    'Organization.Read.All'
+    if ($null -eq $VerifiedDomains) { 'Organization.Read.All' }
 )
 #endregion ---------------------------------------------------------------------
 
@@ -523,7 +523,7 @@ if ($return.Count -eq 0) {
 }
 
 Get-Variable | Where-Object { $StartupVariables -notcontains $_.Name } | & { process { Remove-Variable -Scope 0 -Name $_.Name -Force -WarningAction SilentlyContinue -ErrorAction SilentlyContinue -Verbose:$false -Debug:$false -Confirm:$false -WhatIf:$false } }        # Delete variables created in this script to free up memory for tiny Azure Automation sandbox
-Write-Verbose "-----END of $((Get-Item $PSCommandPath).Name) ---"
+if ($PSCommandPath) { Write-Verbose "-----END of $((Get-Item $PSCommandPath).Name) ---" }
 
 if ($OutJson) { ./Common_0000__Write-JsonOutput.ps1 $return; return }
 if ($OutText) { $return.userPrincipalName; return }
