@@ -317,6 +317,42 @@ function Get-CloudAdminAccountsByTier {
     }
     #endregion -----------------------------------------------------------------
 }
+function Get-ReferralUserId {
+    param(
+        # Specifies the user principal name or object ID of the referral user.
+        [Parameter(Mandatory = $true)]
+        [string] $ReferralUserId
+    )
+
+    $params = @{
+        Method      = 'GET'
+        Uri         = 'https://graph.microsoft.com/v1.0/users?$filter={0}&$select={1}' -f $(
+            @(
+                if ($ReferralUserId -match '^[a-fA-F0-9]{8}-[a-fA-F0-9]{4}-[a-fA-F0-9]{4}-[a-fA-F0-9]{4}-[a-fA-F0-9]{12}$') {
+                    "id eq '$($LocalUserId[$_])'"
+                }
+                else {
+                    "userPrincipalName eq '$([System.Web.HttpUtility]::UrlEncode($ReferralUserId))'"
+                }
+            ) -join ' and '
+        ), $(
+            @(
+                'id'
+            ) -join ','
+        )
+        OutputType  = 'PSObject'
+        ErrorAction = 'Stop'
+        Verbose     = $false
+        Debug       = $false
+    }
+
+    try {
+        return (Invoke-MgGraphRequestWithRetry $params).Value[0].Id
+    }
+    catch {
+        Throw $_
+    }
+}
 function Invoke-MgGraphRequestWithRetry {
     param(
         [Parameter(Mandatory = $true)]
@@ -336,7 +372,7 @@ function Invoke-MgGraphRequestWithRetry {
                 $rateLimitExceeded = $true
             }
             else {
-                throw $_
+                Throw $_
             }
         }
     } while ($rateLimitExceeded)
@@ -446,17 +482,14 @@ if ($ReferralUserId) {
 
             Write-Verbose "[GetCloudAdminAccount]: - Processing ReferralUserId-${_}: $($ReferralUserId[$_])"
             try {
-                $refUserObj = Get-MgUser -UserId $LocalUserId[$_] -ErrorAction Stop
+                $refUserId = Get-ReferralUserId -ReferralUserId $LocalUserId[$_]
             }
             catch {
-                [void] $returnError.Add(( ./Common_0000__Write-Error.ps1 @{
-                            Message           = "Get-MgUser failed for ReferralUserId-${_}: $($ReferralUserId[$_])"
-                            ErrorId           = '400'
-                            Category          = 'InvalidData'
-                            RecommendedAction = 'Check the account and its reference value.'
-                            CategoryActivity  = 'Account Status Sync'
-                            CategoryReason    = "Get-MgUser failed for ReferralUserId-${_}: $($ReferralUserId[$_])"
-                        }))
+                Throw $_
+            }
+
+            if ($null -eq $refUserId) {
+                Write-Warning "$($ReferralUserId[$_]) not found."
                 return
             }
 
@@ -479,7 +512,7 @@ if ($ReferralUserId) {
                             EnabledOnly                      = $EnabledOnly
                             IncludeSoftDeleted               = $IncludeSoftDeleted
                             SoftDeletedOnly                  = $SoftDeletedOnly
-                            ReferralUserId                   = $refUserObj.Id
+                            ReferralUserId                   = $refUserId
                             ReferralUserIdExtensionAttribute = $ReferenceExtensionAttribute
                         }
                         [void] $return.AddRange(@(Get-CloudAdminAccountsByTier @params))
