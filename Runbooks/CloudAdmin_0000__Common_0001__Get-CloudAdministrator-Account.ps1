@@ -12,7 +12,7 @@
 .REQUIREDSCRIPTS CloudAdmin_0000__Common_0000__Get-ConfigurationConstants.ps1
 .EXTERNALSCRIPTDEPENDENCIES https://github.com/workoho/AzAuto-Common-Runbook-FW
 .RELEASENOTES
-    Version 1.0.0 (2024-05-19)
+    Version 1.0.0 (2024-05-20)
     - Initial release.
 #>
 
@@ -329,7 +329,7 @@ function Get-ReferralUserId {
         Uri         = 'https://graph.microsoft.com/v1.0/users?$filter={0}&$select={1}' -f $(
             @(
                 if ($ReferralUserId -match '^[a-fA-F0-9]{8}-[a-fA-F0-9]{4}-[a-fA-F0-9]{4}-[a-fA-F0-9]{4}-[a-fA-F0-9]{12}$') {
-                    "id eq '$($LocalUserId[$_])'"
+                    "id eq '$($ReferralUserId)'"
                 }
                 else {
                     "userPrincipalName eq '$([System.Web.HttpUtility]::UrlEncode($ReferralUserId))'"
@@ -372,7 +372,8 @@ function Invoke-MgGraphRequestWithRetry {
                 $rateLimitExceeded = $true
             }
             else {
-                Throw $_
+                $errorMessage = $_.Exception.Response.Content.ReadAsStringAsync().Result | ConvertFrom-Json
+                Throw "Error $($_.Exception.Response.StatusCode.value__) $($_.Exception.Response.StatusCode): [$($errorMessage.error.code)] $($errorMessage.error.message)"
             }
         }
     } while ($rateLimitExceeded)
