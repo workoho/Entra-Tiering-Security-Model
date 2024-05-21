@@ -41,11 +41,8 @@
     Output the result in JSON format.
     This is useful when output data needs to be processed in other IT systems after the job was completed.
 
-.PARAMETER OutText
-    Output the cloud administrator account user principal name if the account was changed, deleted, or recovered.
-
 .OUTPUTS
-    Output may be requested by using one of the parameters -OutObject, -OutputJson, or -OutText.
+    Output may be requested by using one of the parameters -OutObject or -OutputJson.
     Otherwise, a Success text output is generated, indicating the success of the job.
 #>
 
@@ -68,6 +65,77 @@ if (
 }
 #endregion ---------------------------------------------------------------------
 
+#region [COMMON] FUNCTIONS -----------------------------------------------------
+function Get-ReferralUser {
+    param(
+        # Specifies the user principal name or object ID of the referral user.
+        [Parameter(Mandatory = $true)]
+        [string] $ReferralUserId
+    )
+
+    $params = @{
+        Method      = 'GET'
+        Uri         = 'https://graph.microsoft.com/v1.0/users?$filter={0}&$select={1}&$expand={2}' -f @(
+            "id eq '$($ReferralUserId)'"
+
+            @(
+                'id'
+                'displayName'
+                'userPrincipalName'
+                'accountEnabled'
+                'mail'
+                'onPremisesExtensionAttributes'
+            ) -join ','
+
+            @(
+                'manager'
+            ) -join ','
+        )
+        OutputType  = 'PSObject'
+        ErrorAction = 'Stop'
+        Verbose     = $false
+        Debug       = $false
+    }
+
+    try {
+        return @((Invoke-MgGraphRequestWithRetry $params).Value)[0]
+    }
+    catch {
+        Throw $_
+    }
+}
+function Invoke-MgGraphRequestWithRetry {
+    param(
+        [Parameter(Mandatory = $true)]
+        [hashtable] $Params
+    )
+
+    do {
+        try {
+            $response = Invoke-MgGraphRequest @Params
+            $rateLimitExceeded = $false
+        }
+        catch {
+            if ($_.Exception.Response.StatusCode -eq 429) {
+                $retryAfter = [int]$_.Exception.Response.Headers['Retry-After']
+                Write-Verbose "Rate limit exceeded, retrying in $retryAfter seconds..."
+                Start-Sleep -Seconds $retryAfter
+                $rateLimitExceeded = $true
+            }
+            elseif ($_.Exception.Response.StatusCode -eq 404) {
+                return $null
+            }
+            else {
+                $errorMessage = $_.Exception.Response.Content.ReadAsStringAsync().Result | ConvertFrom-Json
+                Throw "Error $($_.Exception.Response.StatusCode.value__) $($_.Exception.Response.StatusCode): [$($errorMessage.error.code)] $($errorMessage.error.message)"
+            }
+        }
+    } while ($rateLimitExceeded)
+
+    return $response
+}
+#endregion ---------------------------------------------------------------------
+
 #region [COMMON] IMPORT MODULES ------------------------------------------------
 ./Common_0000__Import-Module.ps1 -Modules @(
     @{ Name = 'Microsoft.Graph.Users'; MinimumVersion = '2.0'; MaximumVersion = '2.65535' }
@@ -82,6 +150,7 @@ if (
 
     # Write permissions
     'User.ReadWrite.All'
+    'Directory.Write.Restricted'
 )
 #endregion ---------------------------------------------------------------------
 
@@ -117,86 +186,54 @@ $ConcurrentJobsTime = $ConcurrentJobsWaitEndTime - $ConcurrentJobsWaitStartTime
 #endregion ---------------------------------------------------------------------
 
 #region Required Microsoft Entra Directory Permissions Validation --------------
-# $AllowPrivilegedRoleAdministratorInAzureAutomation = $false
-# $DirectoryPermissions = ./Common_0003__Confirm-MgDirectoryRoleActiveAssignment.ps1 -AllowPrivilegedRoleAdministratorInAzureAutomation:$AllowPrivilegedRoleAdministratorInAzureAutomation -Roles @(
-#     if (
-#         ([string]::IsNullOrEmpty($DedicatedAccount_Tier0)) -or
-#         ($DedicatedAccount_Tier0 -ne 'None') -or
-#         ([string]::IsNullOrEmpty($DedicatedAccount_Tier1)) -or
-#         ($DedicatedAccount_Tier1 -ne 'None') -or
-#         ([string]::IsNullOrEmpty($DedicatedAccount_Tier2)) -or
-#         ($DedicatedAccount_Tier2 -ne 'None')
-#     ) {
-#         # Change existing Tier 0 Cloud Admin Accounts
-#         if (
-#             ([string]::IsNullOrEmpty($DedicatedAccount_Tier0)) -or
-#             ($DedicatedAccount_Tier0 -ne 'None')
-#         ) {
-#             Write-Verbose "[RequiredMicrosoftEntraDirectoryPermissionsValidation]: - Require directory role (Tier 0): User Administrator, Directory Scope: $(if ($AccountRestrictedAdminUnitId_Tier0) { "/administrativeUnits/$AccountRestrictedAdminUnitId_Tier0" } else { '/' })"
-#             @{
-#                 DisplayName      = 'User Administrator'
-#                 TemplateId       = 'fe930be7-5e62-47db-91af-98c3a49a38b1'
-#                 DirectoryScopeId = if ($AccountRestrictedAdminUnitId_Tier0) { "/administrativeUnits/$AccountRestrictedAdminUnitId_Tier0" } else { '/' }
-#             }
+$AllowPrivilegedRoleAdministratorInAzureAutomation = $false
+$DirectoryPermissions = ./Common_0003__Confirm-MgDirectoryRoleActiveAssignment.ps1 -AllowPrivilegedRoleAdministratorInAzureAutomation:$AllowPrivilegedRoleAdministratorInAzureAutomation -Roles @(
+    # Read user sign-in activity logs
+    Write-Verbose '[RequiredMicrosoftEntraDirectoryPermissionsValidation]: - Require directory role: Reports Reader, Directory Scope: /'
+    @{
+        DisplayName = 'Reports Reader'
+        TemplateId  = '4a5d8f65-41da-4de4-8968-e035b65339cf'
+    }
 
-#             # If for whatever reason one does not want/have group-based licensing, manual license assignment is required
-#             if ([string]::IsNullOrEmpty($LicenseGroupId_Tier0)) {
-#                 Write-Verbose "[RequiredMicrosoftEntraDirectoryPermissionsValidation]: - Require directory role (Tier 0): License Administrator, Directory Scope: $(if ($AccountRestrictedAdminUnitId_Tier0) { "/administrativeUnits/$AccountRestrictedAdminUnitId_Tier0" } else { '/' })"
-#                 @{
-#                     DisplayName      = 'License Administrator'
-#                     TemplateId       = '4d6ac14f-3453-41d0-bef9-a3e0c569773a'
-#                     DirectoryScopeId = if ($AccountRestrictedAdminUnitId_Tier0) { "/administrativeUnits/$AccountRestrictedAdminUnitId_Tier0" } else { '/' }
-#                 }
-#             }
-#         }
+    # Change existing Tier 0 Cloud Admin Accounts
+    if (
+            ([string]::IsNullOrEmpty($DedicatedAccount_Tier0)) -or
+            ($DedicatedAccount_Tier0 -ne 'None')
+    ) {
+        Write-Verbose "[RequiredMicrosoftEntraDirectoryPermissionsValidation]: - Require directory role (Tier 0): User Administrator, Directory Scope: $(if ($AccountRestrictedAdminUnitId_Tier0) { "/administrativeUnits/$AccountRestrictedAdminUnitId_Tier0" } else { '/' })"
+        @{
+            DisplayName      = 'User Administrator'
+            TemplateId       = 'fe930be7-5e62-47db-91af-98c3a49a38b1'
+            DirectoryScopeId = if ($AccountRestrictedAdminUnitId_Tier0) { "/administrativeUnits/$AccountRestrictedAdminUnitId_Tier0" } else { '/' }
+        }
+    }
 
-#         # Change existing Tier 1 Cloud Admin Accounts
-#         if (
-#             ([string]::IsNullOrEmpty($DedicatedAccount_Tier1)) -or
-#             ($DedicatedAccount_Tier1 -ne 'None')
-#         ) {
-#             Write-Verbose "[RequiredMicrosoftEntraDirectoryPermissionsValidation]: - Require directory role (Tier 1): User Administrator, Directory Scope: $(if ($AccountAdminUnitId_Tier1) { "/administrativeUnits/$AccountAdminUnitId_Tier1" } else { '/' })"
-#             @{
-#                 DisplayName      = 'User Administrator'
-#                 TemplateId       = 'fe930be7-5e62-47db-91af-98c3a49a38b1'
-#                 DirectoryScopeId = if ($AccountAdminUnitId_Tier1) { "/administrativeUnits/$AccountAdminUnitId_Tier1" } else { '/' }
-#             }
+    # Change existing Tier 1 Cloud Admin Accounts
+    if (
+            ([string]::IsNullOrEmpty($DedicatedAccount_Tier1)) -or
+            ($DedicatedAccount_Tier1 -ne 'None')
+    ) {
+        Write-Verbose "[RequiredMicrosoftEntraDirectoryPermissionsValidation]: - Require directory role (Tier 1): User Administrator, Directory Scope: $(if ($AccountAdminUnitId_Tier1) { "/administrativeUnits/$AccountAdminUnitId_Tier1" } else { '/' })"
+        @{
+            DisplayName      = 'User Administrator'
+            TemplateId       = 'fe930be7-5e62-47db-91af-98c3a49a38b1'
+            DirectoryScopeId = if ($AccountAdminUnitId_Tier1) { "/administrativeUnits/$AccountAdminUnitId_Tier1" } else { '/' }
+        }
+    }
 
-#             # If for whatever reason one does not want/have group-based licensing, manual license assignment is required
-#             if ([string]::IsNullOrEmpty($LicenseGroupId_Tier1)) {
-#                 Write-Verbose "[RequiredMicrosoftEntraDirectoryPermissionsValidation]: - Require directory role (Tier 1): License Administrator, Directory Scope: $(if ($AccountAdminUnitId_Tier1) { "/administrativeUnits/$AccountAdminUnitId_Tier1" } else { '/' })"
-#                 @{
-#                     DisplayName      = 'License Administrator'
-#                     TemplateId       = '4d6ac14f-3453-41d0-bef9-a3e0c569773a'
-#                     DirectoryScopeId = if ($AccountAdminUnitId_Tier1) { "/administrativeUnits/$AccountAdminUnitId_Tier1" } else { '/' }
-#                 }
-#             }
-#         }
-
-#         # Change existing Tier 2 Cloud Admin Accounts
-#         if (
-#             ([string]::IsNullOrEmpty($DedicatedAccount_Tier2)) -or
-#             ($DedicatedAccount_Tier2 -ne 'None')
-#         ) {
-#             Write-Verbose "[RequiredMicrosoftEntraDirectoryPermissionsValidation]: - Require directory role (Tier 2): User Administrator, Directory Scope: $(if ($AccountAdminUnitId_Tier2) { "/administrativeUnits/$AccountAdminUnitId_Tier2" } else { '/' })"
-#             @{
-#                 DisplayName      = 'User Administrator'
-#                 TemplateId       = 'fe930be7-5e62-47db-91af-98c3a49a38b1'
-#                 DirectoryScopeId = if ($AccountAdminUnitId_Tier2) { "/administrativeUnits/$AccountAdminUnitId_Tier2" } else { '/' }
-#             }
-
-#             # If for whatever reason one does not want/have group-based licensing, manual license assignment is required
-#             if ([string]::IsNullOrEmpty($LicenseGroupId_Tier2)) {
-#                 Write-Verbose "[RequiredMicrosoftEntraDirectoryPermissionsValidation]: - Require directory role (Tier 2): License Administrator, Directory Scope: $(if ($AccountAdminUnitId_Tier2) { "/administrativeUnits/$AccountAdminUnitId_Tier2" } else { '/' })"
-#                 @{
-#                     DisplayName      = 'License Administrator'
-#                     TemplateId       = '4d6ac14f-3453-41d0-bef9-a3e0c569773a'
-#                     DirectoryScopeId = if ($AccountAdminUnitId_Tier2) { "/administrativeUnits/$AccountAdminUnitId_Tier2" } else { '/' }
-#                 }
-#             }
-#         }
-#     }
-# )
+    # Change existing Tier 2 Cloud Admin Accounts
+    if (
+            ([string]::IsNullOrEmpty($DedicatedAccount_Tier2)) -or
+            ($DedicatedAccount_Tier2 -ne 'None')
+    ) {
+        Write-Verbose "[RequiredMicrosoftEntraDirectoryPermissionsValidation]: - Require directory role (Tier 2): User Administrator, Directory Scope: $(if ($AccountAdminUnitId_Tier2) { "/administrativeUnits/$AccountAdminUnitId_Tier2" } else { '/' })"
+        @{
+            DisplayName      = 'User Administrator'
+            TemplateId       = 'fe930be7-5e62-47db-91af-98c3a49a38b1'
+            DirectoryScopeId = if ($AccountAdminUnitId_Tier2) { "/administrativeUnits/$AccountAdminUnitId_Tier2" } else { '/' }
+        }
+    }
+)
 #endregion ---------------------------------------------------------------------
 
 #region [COMMON] INITIALIZE SCRIPT VARIABLES -----------------------------------
@@ -207,250 +244,7 @@ $return = @{
     Job = ./Common_0003__Get-AzAutomationJobInfo.ps1
 }
 if ($JobReference) { $return.Job.Reference = $JobReference }
-#endregion ---------------------------------------------------------------------
 
-#region Find Admin Accounts ----------------------------------------------------
-$accounts = [System.Collections.ArrayList]::new()
-if ($ReferralUserId) {
-    $tenant = Get-MgOrganization -OrganizationId (Get-MgContext).TenantId
-    $tenantDomain = $tenant.VerifiedDomains | Where-Object { $_.IsInitial -eq $true }
-    $LocalUserId = @( ./Common_0002__Convert-UserIdToLocalUserId.ps1 -UserId $ReferralUserId -VerifiedDomains $tenant.VerifiedDomains )
-    if ($LocalUserId.Count -ne $ReferralUserId.Count) { Throw 'ReferralUserId count must not be different after LocalUserId conversion.' }
-
-    0..$($ReferralUserId.Count - 1) | & {
-        process {
-            if (
-                ($null -eq $ReferralUserId[$_]) -or
-                ($ReferralUserId[$_] -isnot [string]) -or
-                [string]::IsNullOrEmpty( $ReferralUserId[$_].Trim() )
-            ) {
-                Write-Verbose "[ProcessReferralUserLoop]: - ReferralUserId-$_ Type : $(($ReferralUserId[$_]).GetType().Name)"
-                Write-Verbose "[ProcessReferralUserLoop]: - ReferralUserId-$_ Value: '$($ReferralUserId[$_])'"
-                Write-Warning "[ProcessReferralUserLoop]: - Ignoring array item $_ because 'ReferralUserId' is not a string or IsNullOrEmpty"
-                return
-            }
-
-            if (
-                ($null -eq $LocalUserId[$_]) -or
-                ($LocalUserId[$_] -isnot [string]) -or
-                [string]::IsNullOrEmpty( $LocalUserId[$_].Trim() )
-            ) {
-                Write-Verbose "[ProcessReferralUserLoop]: - LocalUserId-$_ Type : $(($LocalUserId[$_]).GetType().Name)"
-                Write-Verbose "[ProcessReferralUserLoop]: - LocalUserId-$_ Value: '$($LocalUserId[$_])'"
-                Write-Warning "[ProcessReferralUserLoop]: - Ignoring array item $_ because 'LocalUserId' is not a string or IsNullOrEmpty"
-                return
-            }
-
-            if (
-                ($null -ne $Tier) -and
-                ($null -ne $Tier[$_]) -and
-                ($Tier[$_] -is [string]) -and
-                (-Not [string]::IsNullOrEmpty( $Tier[$_].Trim() ))
-            ) {
-                try {
-                    $Tier[$_] = [System.Convert]::ToInt32( $Tier[$_].Trim() )
-                }
-                catch {
-                    Write-Error '[ProcessReferralUserLoop]: - Auto-converting of Tier string to Int32 failed'
-                }
-            }
-
-            Write-Verbose "[ProcessReferralUserLoop]: - Processing ReferralUserId-${_}: $($ReferralUserId[$_])"
-            try {
-                $user = Get-MgUser -UserId $LocalUserId[$_] -ErrorAction Stop
-            }
-            catch {
-                Write-Error "[ProcessReferralUserLoop]: - Get-MgUser failed for ReferralUserId-${_}: $($ReferralUserId[$_])"
-                return
-            }
-
-            if (
-                -not [string]::IsNullOrEmpty($AccountTypeExtensionAttributePrefix_Tier0) -and
-                -not [string]::IsNullOrEmpty($ReferenceExtensionAttribute) -and
-                (
-                    $null -eq $Tier -or
-                    [string]::IsNullOrEmpty( $Tier[$_] ) -or
-                    $Tier[$_] -eq 0
-                )
-            ) {
-                Write-Verbose "[ProcessReferralUserLoop]: - Processing Tier 0 accounts with extension attribute '$AccountTypeExtensionAttribute' and prefix '$AccountTypeExtensionAttributePrefix_Tier0'"
-                $params = @{
-                    All              = $true
-                    ConsistencyLevel = 'eventual'
-                    CountVariable    = 'CountVar'
-                    Filter           = @(
-                        "userType eq 'Member'"
-                        "not endsWith(userPrincipalName, '#EXT#@$tenantDomain')"
-                        "onPremisesSecurityIdentifier eq null"
-                        "onPremisesExtensionAttributes/extensionAttribute$ReferenceExtensionAttribute eq '$($user.Id)'"
-                        "startswith(onPremisesExtensionAttributes/extensionAttribute$AccountTypeExtensionAttribute, '$AccountTypeExtensionAttributePrefix_Tier0')"
-                    ) -join ' and '
-                    Select           = @(
-                        'id'
-                        'displayName'
-                        'userPrincipalName'
-                        'accountEnabled'
-                        'mail'
-                        'onPremisesExtensionAttributes'
-                    )
-                    ErrorAction      = 'Stop'
-                }
-                [void] $accounts.AddRange(@(Get-MgUser @params))
-            }
-
-            if (
-                -not [string]::IsNullOrEmpty($AccountTypeExtensionAttributePrefix_Tier1) -and
-                -not [string]::IsNullOrEmpty($ReferenceExtensionAttribute) -and
-                (
-                    $null -eq $Tier -or
-                    [string]::IsNullOrEmpty( $Tier[$_] ) -or
-                    $Tier[$_] -eq 1
-                )
-            ) {
-                Write-Verbose "[ProcessReferralUserLoop]: - Processing Tier 1 accounts with extension attribute '$AccountTypeExtensionAttribute' and prefix '$AccountTypeExtensionAttributePrefix_Tier1'"
-                $params = @{
-                    All              = $true
-                    ConsistencyLevel = 'eventual'
-                    CountVariable    = 'CountVar'
-                    Filter           = @(
-                        "userType eq 'Member'"
-                        "not endsWith(userPrincipalName, '#EXT#@$tenantDomain')"
-                        "onPremisesSecurityIdentifier eq null"
-                        "onPremisesExtensionAttributes/extensionAttribute$ReferenceExtensionAttribute eq '$($user.Id)'"
-                        "startswith(onPremisesExtensionAttributes/extensionAttribute$AccountTypeExtensionAttribute, '$AccountTypeExtensionAttributePrefix_Tier1')"
-                    ) -join ' and '
-                    Select           = @(
-                        'id'
-                        'displayName'
-                        'userPrincipalName'
-                        'accountEnabled'
-                        'mail'
-                        'onPremisesExtensionAttributes'
-                    )
-                    ErrorAction      = 'Stop'
-                }
-                [void] $accounts.AddRange(@(Get-MgUser @params))
-            }
-
-            if (
-                -not [string]::IsNullOrEmpty($AccountTypeExtensionAttributePrefix_Tier2) -and
-                -not [string]::IsNullOrEmpty($ReferenceExtensionAttribute) -and
-                (
-                    $null -eq $Tier -or
-                    [string]::IsNullOrEmpty( $Tier[$_] ) -or
-                    $Tier[$_] -eq 2
-                )
-            ) {
-                Write-Verbose "[ProcessReferralUserLoop]: - Processing Tier 1 accounts with extension attribute '$AccountTypeExtensionAttribute' and prefix '$AccountTypeExtensionAttributePrefix_Tier2'"
-                $params = @{
-                    All              = $true
-                    ConsistencyLevel = 'eventual'
-                    CountVariable    = 'CountVar'
-                    Filter           = @(
-                        "userType eq 'Member'"
-                        "not endsWith(userPrincipalName, '#EXT#@$tenantDomain')"
-                        "onPremisesSecurityIdentifier eq null"
-                        "onPremisesExtensionAttributes/extensionAttribute$ReferenceExtensionAttribute eq '$($user.Id)'"
-                        "startswith(onPremisesExtensionAttributes/extensionAttribute$AccountTypeExtensionAttribute, '$AccountTypeExtensionAttributePrefix_Tier2')"
-                    ) -join ' and '
-                    Select           = @(
-                        'id'
-                        'displayName'
-                        'userPrincipalName'
-                        'accountEnabled'
-                        'mail'
-                        'onPremisesExtensionAttributes'
-                    )
-                    ErrorAction      = 'Stop'
-                }
-                [void] $accounts.AddRange(@(Get-MgUser @params))
-            }
-        }
-    }
-}
-else {
-    if ([string]::IsNullOrEmpty($AccountTypeExtensionAttribute)) {
-        Throw 'AccountTypeExtensionAttribute must not be null or empty.'
-    }
-    if (-not [string]::IsNullOrEmpty($AccountTypeExtensionAttributePrefix_Tier0)) {
-        Write-Verbose "[FindAdminAccountT0]: - Processing Tier 0 accounts with extension attribute '$AccountTypeExtensionAttribute' and prefix '$AccountTypeExtensionAttributePrefix_Tier0'"
-        $params = @{
-            All              = $true
-            ConsistencyLevel = 'eventual'
-            CountVariable    = 'CountVar'
-            Filter           = @(
-                "userType eq 'Member'"
-                "not endsWith(userPrincipalName, '#EXT#@$tenantDomain')"
-                "onPremisesSecurityIdentifier eq null"
-                "startswith(onPremisesExtensionAttributes/extensionAttribute$AccountTypeExtensionAttribute, '$AccountTypeExtensionAttributePrefix_Tier0')"
-            ) -join ' and '
-            Select           = @(
-                'id'
-                'displayName'
-                'userPrincipalName'
-                'accountEnabled'
-                'mail'
-                'onPremisesExtensionAttributes'
-            )
-            ErrorAction      = 'Stop'
-        }
-        [void] $accounts.AddRange(@(Get-MgUser @params))
-    }
-
-    if (-not [string]::IsNullOrEmpty($AccountTypeExtensionAttributePrefix_Tier1)) {
-        Write-Verbose "[FindAdminAccountT1]: - Processing Tier 1 accounts with extension attribute '$AccountTypeExtensionAttribute' and prefix '$AccountTypeExtensionAttributePrefix_Tier1'"
-        $params = @{
-            All              = $true
-            ConsistencyLevel = 'eventual'
-            CountVariable    = 'CountVar'
-            Filter           = @(
-                "userType eq 'Member'"
-                "not endsWith(userPrincipalName, '#EXT#@$tenantDomain')"
-                "onPremisesSecurityIdentifier eq null"
-                "startswith(onPremisesExtensionAttributes/extensionAttribute$AccountTypeExtensionAttribute, '$AccountTypeExtensionAttributePrefix_Tier1')"
-            ) -join ' and '
-            Select           = @(
-                'id'
-                'displayName'
-                'userPrincipalName'
-                'accountEnabled'
-                'mail'
-                'onPremisesExtensionAttributes'
-            )
-            ErrorAction      = 'Stop'
-        }
-        [void] $accounts.AddRange(@(Get-MgUser @params))
-    }
-
-    if (-not [string]::IsNullOrEmpty($AccountTypeExtensionAttributePrefix_Tier2)) {
-        Write-Verbose "[FindAdminAccountT2]: - Processing Tier 2 accounts with extension attribute '$AccountTypeExtensionAttribute' and prefix '$AccountTypeExtensionAttributePrefix_Tier2'"
-        $params = @{
-            All              = $true
-            ConsistencyLevel = 'eventual'
-            CountVariable    = 'CountVar'
-            Filter           = @(
-                "userType eq 'Member'"
-                "not endsWith(userPrincipalName, '#EXT#@$tenantDomain')"
-                "onPremisesSecurityIdentifier eq null"
-                "startswith(onPremisesExtensionAttributes/extensionAttribute$AccountTypeExtensionAttribute, '$AccountTypeExtensionAttributePrefix_Tier2')"
-            ) -join ' and '
-            Select           = @(
-                'id'
-                'displayName'
-                'userPrincipalName'
-                'accountEnabled'
-                'mail'
-                'onPremisesExtensionAttributes'
-            )
-            ErrorAction      = 'Stop'
-        }
-        [void] $accounts.AddRange(@(Get-MgUser @params))
-    }
-}
-Write-Verbose "[FindAdminAccount]: - Found $($accounts.Count) admin accounts"
-#endregion ---------------------------------------------------------------------
-
-#region Sync admin account status with referral account ------------------------
 if ([string]::IsNullOrEmpty($ReferenceExtensionAttribute)) {
     Throw 'ReferenceExtensionAttribute must not be null or empty.'
 }
@@ -463,16 +257,23 @@ if ([string]::IsNullOrEmpty($AccountTypeExtensionAttributePrefix_Tier1)) {
 if ([string]::IsNullOrEmpty($AccountTypeExtensionAttributePrefix_Tier2)) {
     Throw 'AccountTypeExtensionAttributePrefix_Tier2 must not be null or empty.'
 }
+$TierPrefix = @(
+    $AccountTypeExtensionAttributePrefix_Tier0
+    $AccountTypeExtensionAttributePrefix_Tier1
+    $AccountTypeExtensionAttributePrefix_Tier2
+)
+#endregion ---------------------------------------------------------------------
 
-$accounts | & {
+#region Sync admin account status with referral account ------------------------
+./CloudAdmin_0000__Common_0001__Get-CloudAdministrator-Account.ps1 -ReferralUserId $ReferralUserId -Tier $Tier -IncludeSoftDeleted $true -ErrorAction Stop | & {
     process {
         Write-Verbose "[SyncAdminAccountStatus]: - Processing account: $($_.userPrincipalName) ($($_.Id))"
         if (
             [string]::IsNullOrEmpty( $_.OnPremisesExtensionAttributes."ExtensionAttribute$ReferenceExtensionAttribute" ) -or
-            ($_.OnPremisesExtensionAttributes."ExtensionAttribute$ReferenceExtensionAttribute").Trim() -notmatch '^[0-9a-fA-F]{8}\b-[0-9a-fA-F]{4}\b-[0-9a-fA-F]{4}\b-[0-9a-fA-F]{4}\b-[0-9a-fA-F]{12}$'
+            $_.OnPremisesExtensionAttributes."ExtensionAttribute$ReferenceExtensionAttribute" -notmatch '^[0-9a-fA-F]{8}\b-[0-9a-fA-F]{4}\b-[0-9a-fA-F]{4}\b-[0-9a-fA-F]{4}\b-[0-9a-fA-F]{12}$'
         ) {
             [void] $returnError.Add(( ./Common_0000__Write-Error.ps1 @{
-                        Message           = "Account $($_.userPrincipalName) ($($_.Id)) does not have a valid reference value in OnPremisesExtensionAttributes.ExtensionAttribute$ReferenceExtensionAttribute."
+                        Message           = "Cloud Admin Account $($_.userPrincipalName) ($($_.Id)) does not have a valid reference value in OnPremisesExtensionAttributes.ExtensionAttribute$ReferenceExtensionAttribute."
                         ErrorId           = '400'
                         Category          = 'InvalidData'
                         RecommendedAction = 'Check the account and its reference value.'
@@ -482,16 +283,18 @@ $accounts | & {
             return
         }
 
-        if (
-            [string]::IsNullOrEmpty( $_.OnPremisesExtensionAttributes."ExtensionAttribute$AccountTypeExtensionAttribute" ) -or
-            (
-                ($_.OnPremisesExtensionAttributes."ExtensionAttribute$AccountTypeExtensionAttribute").Trim() -notmatch "^$($AccountTypeExtensionAttributePrefix_Tier0).*" -and
-                ($_.OnPremisesExtensionAttributes."ExtensionAttribute$AccountTypeExtensionAttribute").Trim() -notmatch "^$($AccountTypeExtensionAttributePrefix_Tier1).*" -and
-                ($_.OnPremisesExtensionAttributes."ExtensionAttribute$AccountTypeExtensionAttribute").Trim() -notmatch "^$($AccountTypeExtensionAttributePrefix_Tier2).*"
-            )
-        ) {
+        if ($_.OnPremisesExtensionAttributes."ExtensionAttribute$AccountTypeExtensionAttribute" -match "^$($TierPrefix[0]).*") {
+            $AccountType = 0
+        }
+        elseif ($_.OnPremisesExtensionAttributes."ExtensionAttribute$AccountTypeExtensionAttribute" -match "^$($TierPrefix[1]).*") {
+            $AccountType = 1
+        }
+        elseif ($_.OnPremisesExtensionAttributes."ExtensionAttribute$AccountTypeExtensionAttribute" -match "^$($TierPrefix[2]).*") {
+            $AccountType = 2
+        }
+        else {
             [void] $returnError.Add(( ./Common_0000__Write-Error.ps1 @{
-                        Message           = "Account $($_.userPrincipalName) ($($_.Id)) does not have a valid account type value in OnPremisesExtensionAttributes.ExtensionAttribute$AccountTypeExtensionAttribute."
+                        Message           = "Cloud Admin Account $($_.userPrincipalName) ($($_.Id)) does not have a valid account type value in OnPremisesExtensionAttributes.ExtensionAttribute$AccountTypeExtensionAttribute."
                         ErrorId           = '400'
                         Category          = 'InvalidData'
                         RecommendedAction = 'Check the account and its account type value.'
@@ -500,21 +303,26 @@ $accounts | & {
                     }))
             return
         }
+        Write-Verbose "[SyncAdminAccountStatus]: - This is a Tier $AccountType account"
 
-        $params = @{
-            UserId         = ($_.OnPremisesExtensionAttributes."ExtensionAttribute$ReferenceExtensionAttribute").Trim()
-            Select         = @(
-                'id'
-                'displayName'
-                'userPrincipalName'
-                'accountEnabled'
-                'mail'
-                'onPremisesExtensionAttributes'
-            )
-            ExpandProperty = 'manager'
-            ErrorAction    = 'SilentlyContinue'
+        try {
+            Write-Verbose "[SyncAdminAccountStatus]: - Searching for reference account id: $($_.OnPremisesExtensionAttributes."ExtensionAttribute$ReferenceExtensionAttribute")"
+            $refUserObj = Get-ReferralUser -ReferralUserId $_.OnPremisesExtensionAttributes."ExtensionAttribute$ReferenceExtensionAttribute"
         }
-        $refUserObj = Get-MgUser @params
+        catch {
+            Throw $_
+        }
+
+        if ($_.deletedDateTime -and $null -eq $refUserObj) {
+            Write-Verbose "[SyncAdminAccountStatus]: - Account is soft-deleted and has no existing referring account. Skipping."
+            return
+        }
+
+        if ($_.deletedDateTime -and $null -ne $refUserObj) {
+            Write-Verbose "[SyncAdminAccountStatus]: - Account is soft-deleted, but no automatic recovery is performed. Skipping."
+            return
+        }
+
         $data = @{
             Input             = @{}
             Manager           = @{}
@@ -525,18 +333,39 @@ $accounts | & {
             Mail              = $_.Mail
         }
 
+        #region Delete account
         if ($null -eq $refUserObj) {
             Write-Verbose "[SyncAdminAccountStatus]: - Reference account not found for account: $($_.userPrincipalName) ($($_.Id))"
-            Remove-MgUser -UserId $_.Id -ErrorAction Stop -WhatIf
-            $data.deletedDateTime = (Get-Date).ToUniversalTime()
-            Write-Verbose "[SyncAdminAccountStatus]: - Deleted account: $($data.userPrincipalName) ($($data.Id))"
-            $returnOutput.Add($data)
 
-            if ($OutText) {
-                Write-Output $(if ($data.UserPrincipalName) { $data.UserPrincipalName } else { $null })
+            $params = @{
+                Method      = 'DELETE'
+                Uri         = "https://graph.microsoft.com/v1.0/users/$($_.Id)"
+                ErrorAction = 'Stop'
+                Verbose     = $false
+                Debug       = $false
             }
+
+            try {
+                $null = Invoke-MgGraphRequestWithRetry $params
+            }
+            catch {
+                [void] $returnError.Add(( ./Common_0000__Write-Error.ps1 @{
+                            Message           = "Failed to update account $($_.userPrincipalName) ($($_.Id)) property 'AccountEnabled' to match reference account."
+                            ErrorId           = '500'
+                            Category          = 'InvalidOperation'
+                            RecommendedAction = 'Check the account and its reference account.'
+                            CategoryActivity  = 'Account Status Sync'
+                            CategoryReason    = "Failed to update account $($_.userPrincipalName) ($($_.Id)) property 'AccountEnabled' to match reference account."
+                        }))
+                return
+            }
+
+            $data.deletedDateTime = (Get-Date).ToUniversalTime()
+            Write-Warning "$($_.userPrincipalName) ($($_.Id)): - Deleted account due to missing reference account."
+            [void] $returnOutput.Add($data)
             return
         }
+        #endregion
 
         Write-Verbose "[SyncAdminAccountStatus]: - $($_.userPrincipalName) - Found reference account: $($refUserObj.UserPrincipalName) ($($refUserObj.Id))"
 
@@ -548,7 +377,7 @@ $accounts | & {
                 DisplayName       = $refUserObj.DisplayName
                 AccountEnabled    = $refUserObj.AccountEnabled
             }
-            Tier         = $null
+            Tier         = $AccountType
         }
         if ($null -ne $refUserObj.Manager) {
             $data.Manager = @{
@@ -560,17 +389,41 @@ $accounts | & {
         }
 
         if ($_.AccountEnabled -ne $refUserObj.AccountEnabled) {
-            Write-Verbose "[SyncAdminAccountStatus]: - $($_.userPrincipalName) - Change property AccountEnabled to '$($refUserObj.AccountEnabled)'"
-            $data.AccountEnabled = $refUserObj.AccountEnabled
-            Update-MgUser -UserId $_.Id -AccountEnabled $refUserObj.AccountEnabled -ErrorAction Stop -WhatIf
-            $data.AccountEnabled = $refUserObj.AccountEnabled
-            $returnOutput.Add($data)
-
-            if ($OutText) {
-                Write-Output $(if ($data.UserPrincipalName) { $data.UserPrincipalName } else { $null })
+            Write-Verbose "[SyncAdminAccountStatus]: - $($_.userPrincipalName) - Property 'AccountEnabled' is out of sync with reference account."
+            $params = @{
+                Method      = 'PATCH'
+                Uri         = "https://graph.microsoft.com/v1.0/users/$($_.Id)"
+                Body        = @{
+                    AccountEnabled = $refUserObj.AccountEnabled
+                }
+                OutputType  = 'PSObject'
+                ErrorAction = 'Stop'
+                Verbose     = $false
+                Debug       = $false
             }
-        } else {
+
+            try {
+                $null = Invoke-MgGraphRequestWithRetry $params
+            }
+            catch {
+                [void] $returnError.Add(( ./Common_0000__Write-Error.ps1 @{
+                            Message           = "Failed to update account $($_.userPrincipalName) ($($_.Id)) property 'AccountEnabled' to match reference account."
+                            ErrorId           = '500'
+                            Category          = 'InvalidOperation'
+                            RecommendedAction = 'Check the account and its reference account.'
+                            CategoryActivity  = 'Account Status Sync'
+                            CategoryReason    = "Failed to update account $($_.userPrincipalName) ($($_.Id)) property 'AccountEnabled' to match reference account."
+                        }))
+                return
+            }
+
+            Write-Warning "$($_.userPrincipalName) ($($_.Id)): - Updated property AccountEnabled to '$($refUserObj.AccountEnabled)' to match reference account."
+            $data.AccountEnabled = $refUserObj.AccountEnabled
+            [void] $returnOutput.Add($data)
+        }
+        else {
             Write-Verbose "[SyncAdminAccountStatus]: - $($_.userPrincipalName) - Property 'AccountEnabled' is in sync with reference account."
+            Write-Information "$($_.userPrincipalName) ($($_.Id)): - Property AccountEnabled is in sync with reference account." -InformationAction Continue
         }
     }
 }
