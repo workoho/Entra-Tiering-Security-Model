@@ -8,7 +8,7 @@
         # 2. 'LatestRelease' (ignores ModuleVersion but detects latest release version automatically as it is released)
         # 3. 'latest' (will go to the latest commit of the branch to give you the latest code, but may be unstable)
         # 4. A Git commit hash or branch name (if you know what you're doing and want to pin to a specific commit or branch)
-        GitReference                 = 'ModuleVersion'
+        GitReference                 = 'LatestRelease'
 
         # GitRepositoryUrl must be a valid Git repository URL. You likely don't want to change this unless you're forking the framework.
         GitRepositoryUrl             = 'https://github.com/workoho/AzAuto-Common-Runbook-FW.git'
