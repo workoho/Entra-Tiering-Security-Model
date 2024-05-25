@@ -19,7 +19,7 @@
               }
           },
           "presentation": {
-              "echo": false,
+              "echo": true,
               "reveal": "always",
               "revealProblems": "onProblem",
               "focus": false,
