@@ -190,7 +190,7 @@ function Get-CloudAdminAccountsByTier {
 
     $params = @{
         Method      = 'POST'
-        Uri         = 'https://graph.microsoft.com/beta/$batch'
+        Uri         = 'https://graph.microsoft.com/v1.0/$batch'
         Body        = @{
             requests = [System.Collections.ArrayList] @(
 
@@ -371,7 +371,7 @@ function Get-ReferralUser {
 
     $params = @{
         Method      = 'POST'
-        Uri         = 'https://graph.microsoft.com/beta/$batch'
+        Uri         = 'https://graph.microsoft.com/v1.0/$batch'
         Body        = @{
             requests = @(
                 # First, search in existing users
