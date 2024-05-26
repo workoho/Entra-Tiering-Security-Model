@@ -14,7 +14,7 @@
 .RELEASENOTES
     Version 1.1.0 (2024-05-26)
     - Add CSV output option.
-    - Add ResolveReferralUserId parameter.
+    - Add ExpandReferralUserId parameter.
     - Use batch requests to improve performance.
     - Always request soft-deleted cloud admin accounts and remove respective parameters.
 #>
@@ -49,8 +49,8 @@
 .PARAMETER EnabledOnly
     Specifies whether to retrieve only enabled accounts.
 
-.PARAMETER ResolveReferralUserId
-    Specifies whether to resolve the object ID of the referral user.
+.PARAMETER ExpandReferralUserId
+    Specifies whether to include additional properties related to the referral user in the response.
 
 .PARAMETER VerifiedDomains
     Specifies the verified domains of the organization. If not provided, the script will retrieve the verified domains from the Microsoft Graph API.
@@ -73,7 +73,7 @@ Param (
     [double] $InactiveDays,
     [boolean] $DisabledOnly,
     [boolean] $EnabledOnly,
-    [boolean] $ResolveReferralUserId,
+    [boolean] $ExpandReferralUserId,
     [object] $VerifiedDomains,
     [boolean] $OutJson,
     [boolean] $OutCsv,
@@ -130,8 +130,8 @@ function Get-CloudAdminAccountsByTier {
         # Specifies the extension attribute number that contains the object ID of the referral user. Should be a value between 1 and 15. If ReferralUserId is provided, this must also be provided, and vice versa. These two parameters are linked and must be defined together to ensure correct association with the referral user.
         [ValidateScript(
             {
-                if ($null -ne $ResolveReferralUserId -and $null -eq $_) {
-                    throw "ResolveReferralUserId and ReferralUserIdExtensionAttribute must be defined together."
+                if ($null -ne $ExpandReferralUserId -and $null -eq $_) {
+                    throw "ExpandReferralUserId and ReferralUserIdExtensionAttribute must be defined together."
                 }
                 if ($null -ne $ReferralUserId -and $null -eq $_) {
                     throw "ReferralUserId and ReferralUserIdExtensionAttribute must be defined together."
@@ -147,7 +147,7 @@ function Get-CloudAdminAccountsByTier {
         [string] $ReferralUserId,
 
         # Specifies whether to resolve the object ID of the referral user.
-        [boolean] $ResolveReferralUserId,
+        [boolean] $ExpandReferralUserId,
 
         # Specifies the number of days to consider an account active. If the account has not been active in the last ActiveDays, it will be filtered out.
         # If ActiveDays is less than 1, the comparison will be done based on the last successful sign-in date and time.
@@ -204,7 +204,7 @@ function Get-CloudAdminAccountsByTier {
                     headers = @{
                         ConsistencyLevel = 'eventual'
                     }
-                    url     = '/users?$count=true&$filter={0}&$select={1}' -f $(
+                    url     = 'users?$count=true&$filter={0}&$select={1}' -f $(
                         $filter + @(
                             if ($EnabledOnly) {
                                 Write-Verbose "[GetCloudAdminAccountsByTier]: - Applying accountEnabled=true filter."
@@ -225,7 +225,7 @@ function Get-CloudAdminAccountsByTier {
                     headers = @{
                         ConsistencyLevel = 'eventual'
                     }
-                    url     = '/directory/deletedItems/microsoft.graph.user?$count=true&$filter={0}&$select={1}' -f $($filter -join ' and '), $($select -join ',')
+                    url     = 'directory/deletedItems/microsoft.graph.user?$count=true&$filter={0}&$select={1}' -f $($filter -join ' and '), $($select -join ',')
                 }
             )
         }
@@ -243,8 +243,13 @@ function Get-CloudAdminAccountsByTier {
     while ($response) {
         $response.responses | & {
             process {
-                $_.body.value | & {
+                if ($_.Status -ne 200) {
+                    Throw "Error $($_.Status): [$($_.body.error.code)] $($_.body.error.message)"
+                }
+
+                @($_.body.value) | & {
                     process {
+                        if ($null -eq $_) { return }
                         if ($ActiveDays -or $InactiveDays) {
                             if ($null -eq $_.signInActivity.lastSuccessfulSignInDateTime) {
                                 Write-Verbose "[GetCloudAdminAccount]: - Filter out account $($_.userPrincipalName) due to missing lastSuccessfulSignInDateTime."
@@ -300,7 +305,7 @@ function Get-CloudAdminAccountsByTier {
                         $_ | Add-Member -NotePropertyName 'refOnPremisesExtensionAttributes' -NotePropertyValue $null
 
                         if (
-                            $ResolveReferralUserId -and
+                            $ExpandReferralUserId -and
                             -Not [string]::IsNullOrEmpty($_.onPremisesExtensionAttributes."extensionAttribute$ReferralUserIdExtensionAttribute") -and
                             $_.onPremisesExtensionAttributes."extensionAttribute$ReferralUserIdExtensionAttribute" -match '^[a-fA-F0-9]{8}-[a-fA-F0-9]{4}-[a-fA-F0-9]{4}-[a-fA-F0-9]{4}-[a-fA-F0-9]{12}$'
                         ) {
@@ -327,30 +332,29 @@ function Get-CloudAdminAccountsByTier {
                         $_
                     }
                 }
+
+                $responseId = $_.Id
+                $requestIndexId = $params.Body.requests.IndexOf(($params.Body.requests | Where-Object { $_.id -eq $responseId }))
+
+                if ($_.body.'@odata.nextLink') {
+                    Write-Verbose "[GetCloudAdminAccount]: - Next link found for request ID $($_.Id)."
+                    $params.Body.requests[$requestIndexId].url = $_.body.'@odata.nextLink' -replace '^https://graph.microsoft.com/v1.0/', ''
+                }
+                else {
+                    $params.Body.requests.RemoveAt($requestIndexId)
+                }
             }
         }
 
-        if ($response.responses[1].body.'@odata.nextLink') {
-            $params.Body.requests[1].url = $response.responses[1].body.'@odata.nextLink'
-        }
-        else {
-            $params.Body.requests.RemoveAt(1)
-        }
-
-        if ($response.responses[0].body.'@odata.nextLink') {
-            $params.Body.requests[0].url = $response.responses[0].body.'@odata.nextLink'
-        }
-        else {
-            $params.Body.requests.RemoveAt(0)
-        }
-
         if ($params.Body.requests.Count -gt 0) {
+            Write-Verbose "[GetCloudAdminAccount]: - Sending next batch request."
             $response = $null
             [System.GC]::Collect()
             [System.GC]::WaitForPendingFinalizers()
             $response = Invoke-MgGraphRequestWithRetry $params
         }
         else {
+            Write-Verbose "[GetCloudAdminAccount]: - No more batch requests to send."
             $response = $null
             [System.GC]::Collect()
             [System.GC]::WaitForPendingFinalizers()
@@ -381,7 +385,7 @@ function Get-ReferralUser {
                 @{
                     id     = 1
                     method = 'GET'
-                    url    = '/users?$filter={0}&$select={1}&$expand=manager($select={2})' -f $filter, $(
+                    url    = 'users?$filter={0}&$select={1}&$expand=manager($select={2})' -f $filter, $(
                         @(
                             'displayName'
                             'userPrincipalName'
@@ -409,7 +413,7 @@ function Get-ReferralUser {
                 @{
                     id     = 2
                     method = 'GET'
-                    url    = '/directory/deletedItems/microsoft.graph.user?$filter={0}&$select={1}&$expand=manager($select={2})' -f $filter, $(
+                    url    = 'directory/deletedItems/microsoft.graph.user?$filter={0}&$select={1}&$expand=manager($select={2})' -f $filter, $(
                         @(
                             'displayName'
                             'userPrincipalName'
@@ -615,7 +619,7 @@ if ($ReferralUserId) {
                             InactiveDays                     = $InactiveDays
                             DisabledOnly                     = $DisabledOnly
                             EnabledOnly                      = $EnabledOnly
-                            ResolveReferralUserId            = $ResolveReferralUserId
+                            ExpandReferralUserId             = $ExpandReferralUserId
                             ReferralUserId                   = $refUserId
                             ReferralUserIdExtensionAttribute = $ReferenceExtensionAttribute
                         }
@@ -645,7 +649,7 @@ else {
                 InactiveDays                     = $InactiveDays
                 DisabledOnly                     = $DisabledOnly
                 EnabledOnly                      = $EnabledOnly
-                ResolveReferralUserId            = $ResolveReferralUserId
+                ExpandReferralUserId             = $ExpandReferralUserId
                 ReferralUserIdExtensionAttribute = $ReferenceExtensionAttribute
             }
             [void] $return.AddRange(@(Get-CloudAdminAccountsByTier @params))
