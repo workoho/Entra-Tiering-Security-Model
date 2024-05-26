@@ -58,6 +58,9 @@
 .PARAMETER OutJson
     Specifies whether to output the result as JSON.
 
+.PARAMETER OutCsv
+    Specifies whether to output the result as CSV.
+
 .PARAMETER OutText
     Specifies whether to output the result as text.
 #>
