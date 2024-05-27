@@ -337,25 +337,26 @@ function Get-CloudAdminAccountsByTier {
                                 }
                             }
 
-                            $_ | Add-Member -NotePropertyName 'securityTierLevel' -NotePropertyValue $Tier
-
-                            $_ | Add-Member -NotePropertyName 'refDisplayName' -NotePropertyValue $null
-                            $_ | Add-Member -NotePropertyName 'refUserPrincipalName' -NotePropertyValue $null
-                            $_ | Add-Member -NotePropertyName 'refOnPremisesSamAccountName' -NotePropertyValue $null
-                            $_ | Add-Member -NotePropertyName 'refId' -NotePropertyValue $_.onPremisesExtensionAttributes."extensionAttribute$ReferralUserIdExtensionAttribute"
-                            $_ | Add-Member -NotePropertyName 'refAccountEnabled' -NotePropertyValue $null
-                            $_ | Add-Member -NotePropertyName 'refDeletedDateTime' -NotePropertyValue $null
-                            $_ | Add-Member -NotePropertyName 'refMail' -NotePropertyValue $null
-                            $_ | Add-Member -NotePropertyName 'refCompanyName' -NotePropertyValue $null
-                            $_ | Add-Member -NotePropertyName 'refDepartment' -NotePropertyValue $null
-                            $_ | Add-Member -NotePropertyName 'refStreetAddress' -NotePropertyValue $null
-                            $_ | Add-Member -NotePropertyName 'refCity' -NotePropertyValue $null
-                            $_ | Add-Member -NotePropertyName 'refPostalCode' -NotePropertyValue $null
-                            $_ | Add-Member -NotePropertyName 'refState' -NotePropertyValue $null
-                            $_ | Add-Member -NotePropertyName 'refCountry' -NotePropertyValue $null
-                            $_ | Add-Member -NotePropertyName 'refSignInActivity' -NotePropertyValue $null
-                            $_ | Add-Member -NotePropertyName 'refManager' -NotePropertyValue $null
-                            $_ | Add-Member -NotePropertyName 'refOnPremisesExtensionAttributes' -NotePropertyValue $null
+                            $_ | Add-Member -NotePropertyMembers @{
+                                'securityTierLevel'                = $Tier
+                                'refDisplayName'                   = $null
+                                'refUserPrincipalName'             = $null
+                                'refOnPremisesSamAccountName'      = $null
+                                'refId'                            = $_.onPremisesExtensionAttributes."extensionAttribute$ReferralUserIdExtensionAttribute"
+                                'refAccountEnabled'                = $null
+                                'refDeletedDateTime'               = $null
+                                'refMail'                          = $null
+                                'refCompanyName'                   = $null
+                                'refDepartment'                    = $null
+                                'refStreetAddress'                 = $null
+                                'refCity'                          = $null
+                                'refPostalCode'                    = $null
+                                'refState'                         = $null
+                                'refCountry'                       = $null
+                                'refSignInActivity'                = $null
+                                'refManager'                       = $null
+                                'refOnPremisesExtensionAttributes' = $null
+                            }
 
                             if (
                                 $ExpandReferralUserId -and
