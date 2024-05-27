@@ -876,7 +876,8 @@ if ($OutCsv) {
     $return | & {
         process {
             foreach ($property in $properties.GetEnumerator()) {
-                $_ | Add-Member -NotePropertyName $property.Key -NotePropertyValue $_.$($property.Value)
+                $nestedPropertyPath = $property.Value -split '\.'
+                $_ | Add-Member -NotePropertyName $property.Key -NotePropertyValue $_.$($nestedPropertyPath[0]).$($nestedPropertyPath[1])
             }
 
             $_ | Select-Object -Property @(
