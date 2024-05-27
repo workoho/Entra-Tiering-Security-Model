@@ -15,6 +15,7 @@
     Version 1.2.0 (2024-05-27)
     - Add NeverUsedDays parameter.
     - Add createdDateTime to the output.
+    - Add diverse location information to the output.
     - Add rate limit handling for batch requests.
     - Add directory role validation.
     - Add type conversion for boolean and array types in CSV output.
@@ -345,6 +346,13 @@ function Get-CloudAdminAccountsByTier {
                             $_ | Add-Member -NotePropertyName 'refAccountEnabled' -NotePropertyValue $null
                             $_ | Add-Member -NotePropertyName 'refDeletedDateTime' -NotePropertyValue $null
                             $_ | Add-Member -NotePropertyName 'refMail' -NotePropertyValue $null
+                            $_ | Add-Member -NotePropertyName 'refCompanyName' -NotePropertyValue $null
+                            $_ | Add-Member -NotePropertyName 'refDepartment' -NotePropertyValue $null
+                            $_ | Add-Member -NotePropertyName 'refStreetAddress' -NotePropertyValue $null
+                            $_ | Add-Member -NotePropertyName 'refCity' -NotePropertyValue $null
+                            $_ | Add-Member -NotePropertyName 'refPostalCode' -NotePropertyValue $null
+                            $_ | Add-Member -NotePropertyName 'refState' -NotePropertyValue $null
+                            $_ | Add-Member -NotePropertyName 'refCountry' -NotePropertyValue $null
                             $_ | Add-Member -NotePropertyName 'refSignInActivity' -NotePropertyValue $null
                             $_ | Add-Member -NotePropertyName 'refManager' -NotePropertyValue $null
                             $_ | Add-Member -NotePropertyName 'refOnPremisesExtensionAttributes' -NotePropertyValue $null
@@ -457,6 +465,13 @@ function Get-ReferralUser {
                             'accountEnabled'
                             'deletedDateTime'
                             'mail'
+                            'companyName'
+                            'department'
+                            'streetAddress'
+                            'city'
+                            'postalCode'
+                            'state'
+                            'country'
                             'signInActivity'
                             'onPremisesExtensionAttributes'
                         ) -join ','
@@ -897,6 +912,13 @@ if ($OutCsv) {
                 'refAccountEnabled'
                 'refDeletedDateTime'
                 'refMail'
+                'refCompanyName'
+                'refDepartment'
+                'refStreetAddress'
+                'refCity'
+                'refPostalCode'
+                'refState'
+                'refCountry'
                 'refLastSignInDateTime'
                 'refLastNonInteractiveSignInDateTime'
                 'refLastSuccessfulSignInDateTime'
