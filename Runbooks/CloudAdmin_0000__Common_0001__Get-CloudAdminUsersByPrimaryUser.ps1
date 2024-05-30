@@ -1,5 +1,5 @@
 <#PSScriptInfo
-.VERSION 1.2.0
+.VERSION 1.0.0
 .GUID 04a626b1-2f12-4afa-a789-76e97898cf5b
 .AUTHOR Julian Pawlowski
 .COMPANYNAME Workoho GmbH
@@ -12,28 +12,25 @@
 .REQUIREDSCRIPTS CloudAdmin_0000__Common_0000__Get-ConfigurationConstants.ps1
 .EXTERNALSCRIPTDEPENDENCIES https://github.com/workoho/AzAuto-Common-Runbook-FW
 .RELEASENOTES
-    Version 1.2.0 (2024-05-27)
-    - Add NeverUsedDays parameter.
-    - Add createdDateTime to the output.
-    - Add diverse location information to the output.
-    - Add rate limit handling for batch requests.
-    - Add directory role validation.
-    - Add type conversion for boolean and array types in CSV output.
+    Version 1.0.0 (2024-05-29)
+    - Initial release.
 #>
 
 <#
 .SYNOPSIS
-    Retrieves cloud admin accounts based on the specified tier.
+    Retrieves cloud admin accounts either based on the specified tier, referral user ID, or both.
 
 .DESCRIPTION
-    This script retrieves cloud admin accounts from the Microsoft Graph API based on the specified tier and tier prefix.
-    It can also filter the accounts based on a referral user ID.
+    This script retrieves cloud admin accounts from the Microsoft Graph API based on the specified tier, referral user ID, or both.
 
 .PARAMETER ReferralUserId
-    Specifies the object ID of the referral user identifying that the cloud admin account is associated with this user.
+    Specifies the object ID of the primary user account to search for all associated cloud admin accounts.
+    May be an array, or a comma-separated string of object IDs or user principal names.
+    If not provided, the script will retrieve all cloud admin accounts.
 
 .PARAMETER Tier
     Specifies the tier level of the cloud admin accounts to get. Should be a value between 0 and 2.
+    If not provided, the script will search for all tiers.
 
 .PARAMETER ActiveDays
     Specifies the number of days to consider an account active. If the account has not been active in the last ActiveDays, it will be filtered out.
@@ -58,9 +55,6 @@
 .PARAMETER ExpandReferralUserId
     Specifies whether to include additional properties related to the referral user in the response.
 
-.PARAMETER VerifiedDomains
-    Specifies the verified domains of the organization. If not provided, the script will retrieve the verified domains from the Microsoft Graph API.
-
 .PARAMETER OutJson
     Specifies whether to output the result as JSON.
 
@@ -81,7 +75,6 @@ Param (
     [boolean] $DisabledOnly,
     [boolean] $EnabledOnly,
     [boolean] $ExpandReferralUserId,
-    [object] $VerifiedDomains,
     [boolean] $OutJson,
     [boolean] $OutCsv,
     [boolean] $OutText
@@ -91,8 +84,14 @@ if ($PSCommandPath) { Write-Verbose "---START of $((Get-Item $PSCommandPath).Nam
 $StartupVariables = (Get-Variable | & { process { $_.Name } })      # Remember existing variables so we can cleanup ours at the end of the script
 
 #region [COMMON] PARAMETER VALIDATION ------------------------------------------
+
+# Allow comma-separated values for ReferralUserId and Tier
+$ReferralUserId = @($ReferralUserId) | & { process { $_ -split '\s*,\s*' } } | & { process { if (-not [string]::IsNullOrEmpty($_)) { $_ } } }
+$Tier = @($Tier) | & { process { $_ -split '\s*,\s*' } } | & { process { if (-not [string]::IsNullOrEmpty($_)) { $_ } } }
+
 if (
     ($ReferralUserId.Count -gt 1) -and
+    ($Tier.Count -gt 1) -and
     ($ReferralUserId.Count -ne $Tier.Count)
 ) {
     Throw 'ReferralUserId and Tier must contain the same number of items for batch processing.'
@@ -252,7 +251,7 @@ function Get-CloudAdminAccountsByTier {
     #region Get cloud admin accounts -------------------------------------------
     Write-Verbose "[GetCloudAdminAccountsByTier]: - Retrieving cloud admin accounts for Tier $Tier."
     try {
-        $response = Invoke-MgGraphRequestWithRetry $params
+        $response = ./Common_0002__Invoke-MgGraphRequest.ps1 $params
     }
     catch {
         Throw $_
@@ -338,24 +337,7 @@ function Get-CloudAdminAccountsByTier {
                             }
 
                             $_ | Add-Member -NotePropertyMembers @{
-                                'securityTierLevel'                = $Tier
-                                'refDisplayName'                   = $null
-                                'refUserPrincipalName'             = $null
-                                'refOnPremisesSamAccountName'      = $null
-                                'refId'                            = $_.onPremisesExtensionAttributes."extensionAttribute$ReferralUserIdExtensionAttribute"
-                                'refAccountEnabled'                = $null
-                                'refDeletedDateTime'               = $null
-                                'refMail'                          = $null
-                                'refCompanyName'                   = $null
-                                'refDepartment'                    = $null
-                                'refStreetAddress'                 = $null
-                                'refCity'                          = $null
-                                'refPostalCode'                    = $null
-                                'refState'                         = $null
-                                'refCountry'                       = $null
-                                'refSignInActivity'                = $null
-                                'refManager'                       = $null
-                                'refOnPremisesExtensionAttributes' = $null
+                                securityTierLevel = $Tier
                             }
 
                             if (
@@ -363,23 +345,50 @@ function Get-CloudAdminAccountsByTier {
                                 -Not [string]::IsNullOrEmpty($_.onPremisesExtensionAttributes."extensionAttribute$ReferralUserIdExtensionAttribute") -and
                                 $_.onPremisesExtensionAttributes."extensionAttribute$ReferralUserIdExtensionAttribute" -match '^[a-fA-F0-9]{8}-[a-fA-F0-9]{4}-[a-fA-F0-9]{4}-[a-fA-F0-9]{4}-[a-fA-F0-9]{12}$'
                             ) {
-                                Write-Verbose "[GetCloudAdminAccountByTier]: - Resolving referral user ID for account $($_.userPrincipalName)."
-                                $obj = $_
+                                Write-Verbose "[GetCloudAdminAccountByTier]: - Expanding referral user account for $($_.userPrincipalName)."
                                 try {
-                                    @(Get-ReferralUser -ReferralUserId $_.onPremisesExtensionAttributes."extensionAttribute$ReferralUserIdExtensionAttribute") | & {
-                                        process {
-                                            $_.PSObject.Properties | & {
-                                                process {
-                                                    if ([string]::IsNullOrEmpty($_.Name)) { return }
-                                                    $obj.$('ref{0}{1}' -f $_.Name.Substring(0, 1).ToUpper(), $_.Name.Substring(1)) = $_.Value
+                                    $_ | Add-Member -MemberType NoteProperty -Name 'referralUserAccount' -Value (
+                                        @(./Common_0003__Find-MgUserWithSoftDeleted.ps1 -UserId $_.onPremisesExtensionAttributes."extensionAttribute$ReferralUserIdExtensionAttribute" -Property @(
+                                                'displayName'
+                                                'userPrincipalName'
+                                                'onPremisesSamAccountName'
+                                                'id'
+                                                'accountEnabled'
+                                                'createdDateTime'
+                                                'deletedDateTime'
+                                                'mail'
+                                                'companyName'
+                                                'department'
+                                                'streetAddress'
+                                                'city'
+                                                'postalCode'
+                                                'state'
+                                                'country'
+                                                'signInActivity'
+                                                'onPremisesExtensionAttributes'
+                                            ) -ExpandProperty @(
+                                                @{
+                                                    manager = @(
+                                                        'displayName'
+                                                        'userPrincipalName'
+                                                        'id'
+                                                        'accountEnabled'
+                                                        'mail'
+                                                    )
                                                 }
-                                            }
-                                        }
-                                    }
+                                            ))[0] | Where-Object { $_ -ne $null }
+                                    )
                                 }
                                 catch {
                                     Throw $_
                                 }
+                            }
+                            else {
+                                $_ | Add-Member -MemberType NoteProperty -Name 'referralUserAccount' -Value (
+                                    [PSCustomObject] @{
+                                        id = $_.onPremisesExtensionAttributes."extensionAttribute$ReferralUserIdExtensionAttribute"
+                                    }
+                                )
                             }
 
                             # Return the object to the pipeline
@@ -416,7 +425,7 @@ function Get-CloudAdminAccountsByTier {
             [System.GC]::Collect()
             [System.GC]::WaitForPendingFinalizers()
             try {
-                $response = Invoke-MgGraphRequestWithRetry $params
+                $response = ./Common_0002__Invoke-MgGraphRequest.ps1 $params
             }
             catch {
                 Throw $_
@@ -431,192 +440,6 @@ function Get-CloudAdminAccountsByTier {
     }
     #endregion -----------------------------------------------------------------
 }
-function Get-ReferralUser {
-    param(
-        # Specifies the user principal name or object ID of the referral user.
-        [Parameter(Mandatory = $true)]
-        [string] $ReferralUserId
-    )
-
-    $filter = if ($ReferralUserId -match '^[a-fA-F0-9]{8}-[a-fA-F0-9]{4}-[a-fA-F0-9]{4}-[a-fA-F0-9]{4}-[a-fA-F0-9]{12}$') {
-        "id eq '$($ReferralUserId)'"
-    }
-    else {
-        "userPrincipalName eq '$([System.Web.HttpUtility]::UrlEncode($ReferralUserId))'"
-    }
-
-    $params = @{
-        Method      = 'POST'
-        Uri         = 'https://graph.microsoft.com/v1.0/$batch'
-        Body        = @{
-            requests = [System.Collections.ArrayList] @(
-                # First, search in existing users. We're using $filter here because fetching the user by Id would return an error if the user is soft-deleted or not existing.
-                @{
-                    id      = 1
-                    method  = 'GET'
-                    headers = @{
-                        'Cache-Control' = 'no-cache'
-                    }
-                    url     = 'users?$filter={0}&$select={1}&$expand=manager($select={2})' -f $filter, $(
-                        @(
-                            'displayName'
-                            'userPrincipalName'
-                            'onPremisesSamAccountName'
-                            'id'
-                            'accountEnabled'
-                            'deletedDateTime'
-                            'mail'
-                            'companyName'
-                            'department'
-                            'streetAddress'
-                            'city'
-                            'postalCode'
-                            'state'
-                            'country'
-                            'signInActivity'
-                            'onPremisesExtensionAttributes'
-                        ) -join ','
-                    ), $(
-                        @(
-                            'displayName'
-                            'userPrincipalName'
-                            'onPremisesSamAccountName'
-                            'id'
-                            'accountEnabled'
-                            'mail'
-                        ) -join ','
-                    )
-                }
-
-                # If not found, search in deleted items. We're using $filter here because fetching the user by Id would return an error if the user is not existing.
-                @{
-                    id      = 2
-                    method  = 'GET'
-                    headers = @{
-                        'Cache-Control' = 'no-cache'
-                    }
-                    url     = 'directory/deletedItems/microsoft.graph.user?$filter={0}&$select={1}&$expand=manager($select={2})' -f $filter, $(
-                        @(
-                            'displayName'
-                            'userPrincipalName'
-                            'id'
-                            'accountEnabled'
-                            'deletedDateTime'
-                            'mail'
-                            'signInActivity'
-                            'onPremisesExtensionAttributes'
-                        ) -join ','
-                    ), $(
-                        @(
-                            'displayName'
-                            'userPrincipalName'
-                            'id'
-                            'accountEnabled'
-                            'mail'
-                        ) -join ','
-                    )
-                }
-            )
-        }
-        OutputType  = 'PSObject'
-        ErrorAction = 'Stop'
-        Verbose     = $false
-        Debug       = $false
-    }
-
-    $retryAfter = $null
-
-    try {
-        $response = Invoke-MgGraphRequestWithRetry $params
-    }
-    catch {
-        Throw $_
-    }
-
-    while ($response) {
-        $response.responses | Sort-Object -Property Id | & {
-            process {
-                if ($_.status -eq 429) {
-                    $retryAfter = if (-not $retryAfter -or $retryAfter -gt $_.Headers.'Retry-After') { [int] $_.Headers.'Retry-After' }
-                }
-                elseif ($_.status -eq 200 -or $_.status -eq 404) {
-                    $responseId = $_.Id
-
-                    if ($null -ne $_.body.value) {
-                        @($_.body.value)[0]
-                    }
-
-                    $requestIndexId = $params.Body.requests.IndexOf(($params.Body.requests | Where-Object { $_.id -eq $responseId }))
-                    $params.Body.requests.RemoveAt($requestIndexId)
-                }
-                else {
-                    Throw "Error $($_.status): [$($_.body.error.code)] $($_.body.error.message)"
-                }
-            }
-        }
-
-        if ($params.Body.requests.Count -gt 0) {
-            if ($retryAfter) {
-                Write-Verbose "[GetReferralUser]: - Rate limit exceeded, waiting for $retryAfter seconds..."
-                Start-Sleep -Seconds $retryAfter
-            }
-            try {
-                $response = Invoke-MgGraphRequestWithRetry $params
-            }
-            catch {
-                Throw $_
-            }
-        }
-        else {
-            $response = $null
-            [System.GC]::Collect()
-            [System.GC]::WaitForPendingFinalizers()
-        }
-    }
-}
-function Invoke-MgGraphRequestWithRetry {
-    param(
-        [Parameter(Mandatory = $true)]
-        [hashtable] $Params
-    )
-
-    $maxRetries = 5
-    $retryCount = 0
-    $baseWaitTime = 1 # start with 1 second
-
-    do {
-        try {
-            $response = Invoke-MgGraphRequest @Params
-            $rateLimitExceeded = $false
-        }
-        catch {
-            if ($_.Exception.Response -ne $null -and $_.Exception.Response.StatusCode -eq 429) {
-                $waitTime = [math]::max($_.Exception.Response.Headers['Retry-After'] -as [int], $baseWaitTime)
-                $jitter = Get-Random -Minimum 0 -Maximum 0.5 # random jitter between 0 and 0.5 seconds, with decimal precision
-                $waitTime += $jitter
-
-                Write-Verbose "Rate limit exceeded, retrying in $waitTime seconds..."
-                Start-Sleep -Milliseconds ($waitTime * 1000) # convert wait time to milliseconds for Start-Sleep
-                $retryCount++
-                $baseWaitTime *= 1.5 # client side exponential backoff
-                $rateLimitExceeded = $true
-            }
-            elseif ($_.Exception.Response -ne $null) {
-                $errorMessage = $_.Exception.Response.Content.ReadAsStringAsync().Result | ConvertFrom-Json
-                Throw "Error $($_.Exception.Response.StatusCode.value__) $($_.Exception.Response.StatusCode): [$($errorMessage.error.code)] $($errorMessage.error.message)"
-            }
-            else {
-                Throw "Network error: $($_.Exception.Message)"
-            }
-        }
-    } while ($rateLimitExceeded -and $retryCount -lt $maxRetries)
-
-    if ($rateLimitExceeded) {
-        Throw "Rate limit exceeded after $maxRetries retries."
-    }
-
-    return $response
-}
 #endregion ---------------------------------------------------------------------
 
 #region [COMMON] OPEN CONNECTIONS: Microsoft Graph -----------------------------
@@ -624,7 +447,7 @@ function Invoke-MgGraphRequestWithRetry {
     # Read-only permissions
     'AuditLog.Read.All'
     'Directory.Read.All'
-    if ($null -eq $VerifiedDomains) { 'Organization.Read.All' }
+    'Organization.Read.All'
 )
 #endregion ---------------------------------------------------------------------
 
@@ -664,22 +487,11 @@ $TierPrefix = @(
     $AccountTypeExtensionAttributePrefix_Tier2
 )
 
-if ($null -eq $VerifiedDomains) {
-    try {
-        $VerifiedDomains = (Invoke-MgGraphRequestWithRetry @{Method = 'GET'; Uri = 'https://graph.microsoft.com/v1.0/organization'; OutputType = 'PSObject'; ErrorAction = 'Stop'; Verbose = $false; Debug = $false }).Value.VerifiedDomains
-    }
-    catch {
-        Throw $_
-    }
+try {
+    $VerifiedDomains = (./Common_0002__Invoke-MgGraphRequest.ps1 @{ Method = 'GET'; Uri = 'https://graph.microsoft.com/v1.0/organization'; OutputType = 'PSObject'; ErrorAction = 'Stop'; Verbose = $false; Debug = $false }).Value.VerifiedDomains
 }
-if (
-    $null -ne $VerifiedDomains -and
-    (
-        $VerifiedDomains -isnot [array] -or
-        $VerifiedDomains.Count -lt 1
-    )
-) {
-    Throw 'VerifiedDomains must be an array containing the verified domains of the organization.'
+catch {
+    Throw $_
 }
 
 $InitialTenantDomain = ($VerifiedDomains | Where-Object { $_.IsInitial -eq $true }).Name
@@ -736,7 +548,7 @@ if ($ReferralUserId) {
 
             Write-Verbose "[GetCloudAdminAccount]: - Processing ReferralUserId-${_}: $($ReferralUserId[$_])"
             try {
-                $refUserId = @(Get-ReferralUser -ReferralUserId $LocalUserId[$_])[0].Id
+                $refUserId = @(./Common_0003__Find-MgUserWithSoftDeleted.ps1 -UserId $LocalUserId[$_])[0].Id
             }
             catch {
                 Throw $_
@@ -846,38 +658,60 @@ if ($OutCsv) {
         'extensionAttribute14'                = 'onPremisesExtensionAttributes.extensionAttribute14'
         'extensionAttribute15'                = 'onPremisesExtensionAttributes.extensionAttribute15'
 
-        'refLastSignInDateTime'               = 'refSignInActivity.lastSignInDateTime'
-        'refLastNonInteractiveSignInDateTime' = 'refSignInActivity.lastNonInteractiveSignInDateTime'
-        'refLastSuccessfulSignInDateTime'     = 'refSignInActivity.lastSuccessfulSignInDateTime'
-        'refExtensionAttribute1'              = 'refOnPremisesExtensionAttributes.extensionAttribute1'
-        'refExtensionAttribute2'              = 'refOnPremisesExtensionAttributes.extensionAttribute2'
-        'refExtensionAttribute3'              = 'refOnPremisesExtensionAttributes.extensionAttribute3'
-        'refExtensionAttribute4'              = 'refOnPremisesExtensionAttributes.extensionAttribute4'
-        'refExtensionAttribute5'              = 'refOnPremisesExtensionAttributes.extensionAttribute5'
-        'refExtensionAttribute6'              = 'refOnPremisesExtensionAttributes.extensionAttribute6'
-        'refExtensionAttribute7'              = 'refOnPremisesExtensionAttributes.extensionAttribute7'
-        'refExtensionAttribute8'              = 'refOnPremisesExtensionAttributes.extensionAttribute8'
-        'refExtensionAttribute9'              = 'refOnPremisesExtensionAttributes.extensionAttribute9'
-        'refExtensionAttribute10'             = 'refOnPremisesExtensionAttributes.extensionAttribute10'
-        'refExtensionAttribute11'             = 'refOnPremisesExtensionAttributes.extensionAttribute11'
-        'refExtensionAttribute12'             = 'refOnPremisesExtensionAttributes.extensionAttribute12'
-        'refExtensionAttribute13'             = 'refOnPremisesExtensionAttributes.extensionAttribute13'
-        'refExtensionAttribute14'             = 'refOnPremisesExtensionAttributes.extensionAttribute14'
-        'refExtensionAttribute15'             = 'refOnPremisesExtensionAttributes.extensionAttribute15'
+        'refDisplayName'                      = 'referralUserAccount.displayName'
+        'refUserPrincipalName'                = 'referralUserAccount.userPrincipalName'
+        'refOnPremisesSamAccountName'         = 'referralUserAccount.onPremisesSamAccountName'
+        'refId'                               = 'referralUserAccount.id'
+        'refAccountEnabled'                   = 'referralUserAccount.accountEnabled'
+        'refDeletedDateTime'                  = 'referralUserAccount.deletedDateTime'
+        'refMail'                             = 'referralUserAccount.mail'
+        'refCompanyName'                      = 'referralUserAccount.companyName'
+        'refDepartment'                       = 'referralUserAccount.department'
+        'refStreetAddress'                    = 'referralUserAccount.streetAddress'
+        'refCity'                             = 'referralUserAccount.city'
+        'refPostalCode'                       = 'referralUserAccount.postalCode'
+        'refState'                            = 'referralUserAccount.state'
+        'refCountry'                          = 'referralUserAccount.country'
+        'refLastSignInDateTime'               = 'referralUserAccount.signInActivity.lastSignInDateTime'
+        'refLastNonInteractiveSignInDateTime' = 'referralUserAccount.signInActivity.lastNonInteractiveSignInDateTime'
+        'refLastSuccessfulSignInDateTime'     = 'referralUserAccount.signInActivity.lastSuccessfulSignInDateTime'
+        'refExtensionAttribute1'              = 'referralUserAccount.onPremisesExtensionAttributes.extensionAttribute1'
+        'refExtensionAttribute2'              = 'referralUserAccount.onPremisesExtensionAttributes.extensionAttribute2'
+        'refExtensionAttribute3'              = 'referralUserAccount.onPremisesExtensionAttributes.extensionAttribute3'
+        'refExtensionAttribute4'              = 'referralUserAccount.onPremisesExtensionAttributes.extensionAttribute4'
+        'refExtensionAttribute5'              = 'referralUserAccount.onPremisesExtensionAttributes.extensionAttribute5'
+        'refExtensionAttribute6'              = 'referralUserAccount.onPremisesExtensionAttributes.extensionAttribute6'
+        'refExtensionAttribute7'              = 'referralUserAccount.onPremisesExtensionAttributes.extensionAttribute7'
+        'refExtensionAttribute8'              = 'referralUserAccount.onPremisesExtensionAttributes.extensionAttribute8'
+        'refExtensionAttribute9'              = 'referralUserAccount.onPremisesExtensionAttributes.extensionAttribute9'
+        'refExtensionAttribute10'             = 'referralUserAccount.onPremisesExtensionAttributes.extensionAttribute10'
+        'refExtensionAttribute11'             = 'referralUserAccount.onPremisesExtensionAttributes.extensionAttribute11'
+        'refExtensionAttribute12'             = 'referralUserAccount.onPremisesExtensionAttributes.extensionAttribute12'
+        'refExtensionAttribute13'             = 'referralUserAccount.onPremisesExtensionAttributes.extensionAttribute13'
+        'refExtensionAttribute14'             = 'referralUserAccount.onPremisesExtensionAttributes.extensionAttribute14'
+        'refExtensionAttribute15'             = 'referralUserAccount.onPremisesExtensionAttributes.extensionAttribute15'
 
-        'managerDisplayName'                  = 'refManager.displayName'
-        'managerUserPrincipalName'            = 'refManager.userPrincipalName'
-        'managerOnPremisesSamAccountName'     = 'refManager.onPremisesSamAccountName'
-        'managerId'                           = 'refManager.id'
-        'managerAccountEnabled'               = 'refManager.accountEnabled'
-        'managerMail'                         = 'refManager.mail'
+        'managerDisplayName'                  = 'referralUserAccount.manager.displayName'
+        'managerUserPrincipalName'            = 'referralUserAccount.manager.userPrincipalName'
+        'managerOnPremisesSamAccountName'     = 'referralUserAccount.manager.onPremisesSamAccountName'
+        'managerId'                           = 'referralUserAccount.manager.id'
+        'managerAccountEnabled'               = 'referralUserAccount.manager.accountEnabled'
+        'managerMail'                         = 'referralUserAccount.manager.mail'
     }
 
     $return | & {
         process {
             foreach ($property in $properties.GetEnumerator()) {
                 $nestedPropertyPath = $property.Value -split '\.'
-                $_ | Add-Member -NotePropertyName $property.Key -NotePropertyValue $_.$($nestedPropertyPath[0]).$($nestedPropertyPath[1])
+                if ($nestedPropertyPath.count -eq 3) {
+                    $_ | Add-Member -NotePropertyName $property.Key -NotePropertyValue $_.$($nestedPropertyPath[0]).$($nestedPropertyPath[1]).$($nestedPropertyPath[2])
+                }
+                elseif ($nestedPropertyPath.count -eq 2) {
+                    $_ | Add-Member -NotePropertyName $property.Key -NotePropertyValue $_.$($nestedPropertyPath[0]).$($nestedPropertyPath[1])
+                }
+                else {
+                    Throw "Invalid nested property path: $($property.Value)"
+                }
             }
 
             $_ | Select-Object -Property @(
@@ -907,6 +741,7 @@ if ($OutCsv) {
                 'extensionAttribute13'
                 'extensionAttribute14'
                 'extensionAttribute15'
+
                 'refDisplayName'
                 'refUserPrincipalName'
                 'refOnPremisesSamAccountName'
@@ -939,6 +774,7 @@ if ($OutCsv) {
                 'refExtensionAttribute13'
                 'refExtensionAttribute14'
                 'refExtensionAttribute15'
+
                 'managerDisplayName'
                 'managerUserPrincipalName'
                 'managerOnPremisesSamAccountName'
