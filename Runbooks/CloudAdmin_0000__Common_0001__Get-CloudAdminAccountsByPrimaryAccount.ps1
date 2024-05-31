@@ -813,9 +813,9 @@ if ($OutCsv) {
                 $_
             }
         }
-    ) -BlobStorageUri $(
-        if (-not [string]::IsNullOrEmpty($BlobContainerUri)) {
-            $BlobContainerUri + '/' + [DateTime]::UtcNow.ToString('yyyyMMddTHHmmssfffZ') + '_Get-CloudAdminAccountsByPrimaryAccount.csv'
+    ) -StorageUri $(
+        if (-not [string]::IsNullOrEmpty($StorageUri)) {
+            $StorageUri + '/' + [DateTime]::UtcNow.ToString('yyyyMMddTHHmmssfffZ') + '_Get-CloudAdminAccountsByPrimaryAccount.csv'
         }
     )
     return
