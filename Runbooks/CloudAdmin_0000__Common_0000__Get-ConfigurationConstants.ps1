@@ -220,10 +220,10 @@ $Constants = [array] @(
         Regex         = '^-?\d+$'
     }
     @{
-        sourceName    = "AV_CloudAdmin_BlobStorageUri"
-        mapToVariable = 'BlobStorageUri'
+        sourceName    = "AV_CloudAdmin_BlobContainerUri"
+        mapToVariable = 'BlobContainerUri'
         defaultValue  = $null
-        Regex         = '^https:\/\/[a-z0-9]+\.blob\.core\.windows\.net\/[a-z0-9-]+\/[a-zA-Z0-9-_.\/]+$'
+        Regex         = '^https:\/\/[a-z0-9]+\.blob\.core\.windows\.net\/[a-z0-9-]+$'
     }
     @{
         sourceName    = "AV_CloudAdmin_Webhook"
