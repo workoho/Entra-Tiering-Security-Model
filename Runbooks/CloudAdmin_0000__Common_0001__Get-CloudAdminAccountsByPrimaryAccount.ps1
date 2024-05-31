@@ -86,8 +86,23 @@ $StartupVariables = (Get-Variable | & { process { $_.Name } })      # Remember e
 #region [COMMON] PARAMETER VALIDATION ------------------------------------------
 
 # Allow comma-separated values for ReferralUserId and Tier
-$ReferralUserId = @($ReferralUserId) | & { process { $_ -split '\s*,\s*' } } | & { process { if (-not [string]::IsNullOrEmpty($_)) { $_ } } }
-$Tier = @($Tier) | & { process { $_ -split '\s*,\s*' } } | & { process { if (-not [string]::IsNullOrEmpty($_)) { $_ } } }
+$CloudAdminUserId = if ([string]::IsNullOrEmpty($CloudAdminUserId)) { @() } else {
+    @($CloudAdminUserId) | & { process { $_ -split '\s*,\s*' } } | & { process { if (-not [string]::IsNullOrEmpty($_)) { $_ } } }
+}
+$Tier = if ([string]::IsNullOrEmpty($Tier)) { @() } else {
+    @($Tier) | & { process { $_ -split '\s*,\s*' } } | & {
+        process {
+            if (-not [string]::IsNullOrEmpty($_)) {
+                try {
+                    [System.Convert]::ToInt32($_)
+                }
+                catch {
+                    Write-Error '[GetPrimaryUserByCloudAdminUser]: - Auto-converting of Tier string to Int32 failed'
+                }
+            }
+        }
+    }
+}
 
 if (
     ($ReferralUserId.Count -gt 1) -and
@@ -634,9 +649,7 @@ if ($PSCommandPath) { Write-Verbose "-----END of $((Get-Item $PSCommandPath).Nam
 if ($OutJson) { if ($return.Count -eq 0) { return '[]' }; ./Common_0000__Write-JsonOutput.ps1 $return; return }
 
 if ($OutCsv) {
-    if ($return.Count -eq 0) {
-        return 'No cloud admin accounts found.'
-    }
+    if ($return.Count -eq 0) { return }
 
     $properties = @{
         'lastSignInDateTime'                  = 'signInActivity.lastSignInDateTime'
@@ -699,106 +712,112 @@ if ($OutCsv) {
         'managerMail'                         = 'referralUserAccount.manager.mail'
     }
 
-    $return | & {
-        process {
-            foreach ($property in $properties.GetEnumerator()) {
-                $nestedPropertyPath = $property.Value -split '\.'
-                if ($nestedPropertyPath.count -eq 3) {
-                    $_ | Add-Member -NotePropertyName $property.Key -NotePropertyValue $_.$($nestedPropertyPath[0]).$($nestedPropertyPath[1]).$($nestedPropertyPath[2])
+    ./Common_0000__Write-CsvOutput.ps1 -InputObject (
+        $return | & {
+            process {
+                foreach ($property in $properties.GetEnumerator()) {
+                    $nestedPropertyPath = $property.Value -split '\.'
+                    if ($nestedPropertyPath.count -eq 3) {
+                        $_ | Add-Member -NotePropertyName $property.Key -NotePropertyValue $_.$($nestedPropertyPath[0]).$($nestedPropertyPath[1]).$($nestedPropertyPath[2])
+                    }
+                    elseif ($nestedPropertyPath.count -eq 2) {
+                        $_ | Add-Member -NotePropertyName $property.Key -NotePropertyValue $_.$($nestedPropertyPath[0]).$($nestedPropertyPath[1])
+                    }
+                    else {
+                        Throw "Invalid nested property path: $($property.Value)"
+                    }
                 }
-                elseif ($nestedPropertyPath.count -eq 2) {
-                    $_ | Add-Member -NotePropertyName $property.Key -NotePropertyValue $_.$($nestedPropertyPath[0]).$($nestedPropertyPath[1])
-                }
-                else {
-                    Throw "Invalid nested property path: $($property.Value)"
-                }
+
+                $_ | Select-Object -Property @(
+                    'securityTierLevel'
+                    'displayName'
+                    'userPrincipalName'
+                    'id'
+                    'accountEnabled'
+                    'createdDateTime'
+                    'deletedDateTime'
+                    'mail'
+                    'lastSignInDateTime'
+                    'lastNonInteractiveSignInDateTime'
+                    'lastSuccessfulSignInDateTime'
+                    'extensionAttribute1'
+                    'extensionAttribute2'
+                    'extensionAttribute3'
+                    'extensionAttribute4'
+                    'extensionAttribute5'
+                    'extensionAttribute6'
+                    'extensionAttribute7'
+                    'extensionAttribute8'
+                    'extensionAttribute9'
+                    'extensionAttribute10'
+                    'extensionAttribute11'
+                    'extensionAttribute12'
+                    'extensionAttribute13'
+                    'extensionAttribute14'
+                    'extensionAttribute15'
+
+                    'refDisplayName'
+                    'refUserPrincipalName'
+                    'refOnPremisesSamAccountName'
+                    'refId'
+                    'refAccountEnabled'
+                    'refDeletedDateTime'
+                    'refMail'
+                    'refCompanyName'
+                    'refDepartment'
+                    'refStreetAddress'
+                    'refCity'
+                    'refPostalCode'
+                    'refState'
+                    'refCountry'
+                    'refLastSignInDateTime'
+                    'refLastNonInteractiveSignInDateTime'
+                    'refLastSuccessfulSignInDateTime'
+                    'refExtensionAttribute1'
+                    'refExtensionAttribute2'
+                    'refExtensionAttribute3'
+                    'refExtensionAttribute4'
+                    'refExtensionAttribute5'
+                    'refExtensionAttribute6'
+                    'refExtensionAttribute7'
+                    'refExtensionAttribute8'
+                    'refExtensionAttribute9'
+                    'refExtensionAttribute10'
+                    'refExtensionAttribute11'
+                    'refExtensionAttribute12'
+                    'refExtensionAttribute13'
+                    'refExtensionAttribute14'
+                    'refExtensionAttribute15'
+
+                    'managerDisplayName'
+                    'managerUserPrincipalName'
+                    'managerOnPremisesSamAccountName'
+                    'managerId'
+                    'managerAccountEnabled'
+                    'managerMail'
+                )
             }
-
-            $_ | Select-Object -Property @(
-                'securityTierLevel'
-                'displayName'
-                'userPrincipalName'
-                'id'
-                'accountEnabled'
-                'createdDateTime'
-                'deletedDateTime'
-                'mail'
-                'lastSignInDateTime'
-                'lastNonInteractiveSignInDateTime'
-                'lastSuccessfulSignInDateTime'
-                'extensionAttribute1'
-                'extensionAttribute2'
-                'extensionAttribute3'
-                'extensionAttribute4'
-                'extensionAttribute5'
-                'extensionAttribute6'
-                'extensionAttribute7'
-                'extensionAttribute8'
-                'extensionAttribute9'
-                'extensionAttribute10'
-                'extensionAttribute11'
-                'extensionAttribute12'
-                'extensionAttribute13'
-                'extensionAttribute14'
-                'extensionAttribute15'
-
-                'refDisplayName'
-                'refUserPrincipalName'
-                'refOnPremisesSamAccountName'
-                'refId'
-                'refAccountEnabled'
-                'refDeletedDateTime'
-                'refMail'
-                'refCompanyName'
-                'refDepartment'
-                'refStreetAddress'
-                'refCity'
-                'refPostalCode'
-                'refState'
-                'refCountry'
-                'refLastSignInDateTime'
-                'refLastNonInteractiveSignInDateTime'
-                'refLastSuccessfulSignInDateTime'
-                'refExtensionAttribute1'
-                'refExtensionAttribute2'
-                'refExtensionAttribute3'
-                'refExtensionAttribute4'
-                'refExtensionAttribute5'
-                'refExtensionAttribute6'
-                'refExtensionAttribute7'
-                'refExtensionAttribute8'
-                'refExtensionAttribute9'
-                'refExtensionAttribute10'
-                'refExtensionAttribute11'
-                'refExtensionAttribute12'
-                'refExtensionAttribute13'
-                'refExtensionAttribute14'
-                'refExtensionAttribute15'
-
-                'managerDisplayName'
-                'managerUserPrincipalName'
-                'managerOnPremisesSamAccountName'
-                'managerId'
-                'managerAccountEnabled'
-                'managerMail'
-            )
-        }
-    } | & {
-        process {
-            foreach ($property in $_.PSObject.Properties) {
-                if ($property.Value -is [DateTime]) {
-                    $property.Value = [DateTime]::Parse($property.Value).ToUniversalTime().ToString('yyyy-MM-ddTHH:mm:ssZ')
+        } | & {
+            process {
+                foreach ($property in $_.PSObject.Properties) {
+                    if ($property.Value -is [DateTime]) {
+                        $property.Value = [DateTime]::Parse($property.Value).ToUniversalTime().ToString('yyyy-MM-ddTHH:mm:ssZ')
+                    }
+                    elseif ($property.Value -is [bool]) {
+                        $property.Value = if ($property.Value) { '1' } else { '0' }
+                    }
+                    elseif ($property.Value -is [array]) {
+                        $property.Value = $property.Value -join ', '
+                    }
                 }
-                elseif ($property.Value -is [bool]) {
-                    $property.Value = if ($property.Value) { '1' } else { '0' }
-                }
-                elseif ($property.Value -is [array]) {
-                    $property.Value = $property.Value -join ', '
-                }
+                $_
             }
-            $_
         }
-    } | ConvertTo-Csv -NoTypeInformation
+    ) -BlobStorageUri $(
+        if (-not [string]::IsNullOrEmpty($BlobContainerUri)) {
+            $BlobContainerUri + '/' + [DateTime]::UtcNow.ToString('yyyyMMddTHHmmssfffZ') + '_Get-CloudAdminAccountsByPrimaryAccount.csv'
+        }
+    )
     return
 }
 

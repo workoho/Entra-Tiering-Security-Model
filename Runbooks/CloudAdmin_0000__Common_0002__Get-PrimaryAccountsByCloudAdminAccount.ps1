@@ -141,7 +141,7 @@ $return = [System.Collections.ArrayList]::new()
 
 #region Get all Cloud Admin User Accounts --------------------------------------
 if ($null -eq $CloudAdminUserId -or $CloudAdminUserId.Count -eq 0) {
-    $CloudAdminUserId = ./CloudAdmin_0000__Common_0001__Get-CloudAdminUsersByPrimaryUser.ps1 -Tier $Tier
+    $CloudAdminUserId = ./CloudAdmin_0000__Common_0001__Get-CloudAdminAccountsByPrimaryAccount.ps1 -Tier $Tier
 }
 #endregion ---------------------------------------------------------------------
 
@@ -315,7 +315,7 @@ if ($OutJson) { if ($return.Count -eq 0) { return '[]' }; ./Common_0000__Write-J
 
 if ($OutCsv) {
     if ($return.Count -eq 0) {
-        return 'No reference user accounts found.'
+        return 'No referenced primary user accounts found.'
     }
 
     $properties = @{
@@ -367,171 +367,185 @@ if ($OutCsv) {
         'extensionAttribute15'             = 'onPremisesExtensionAttributes.extensionAttribute15'
     }
 
-    $return | & {
-        process {
-            foreach ($property in $properties.GetEnumerator()) {
-                $nestedPropertyPath = $property.Value -split '\.'
-                if ($nestedPropertyPath.count -eq 3) {
-                    $_ | Add-Member -NotePropertyName $property.Key -NotePropertyValue $_.$($nestedPropertyPath[0]).$($nestedPropertyPath[1]).$($nestedPropertyPath[2])
+    ./Common_0000__Write-CsvOutput.ps1 -InputObject (
+        $return | & {
+            process {
+                foreach ($property in $properties.GetEnumerator()) {
+                    $nestedPropertyPath = $property.Value -split '\.'
+                    if ($nestedPropertyPath.count -eq 3) {
+                        $_ | Add-Member -NotePropertyName $property.Key -NotePropertyValue $_.$($nestedPropertyPath[0]).$($nestedPropertyPath[1]).$($nestedPropertyPath[2])
+                    }
+                    elseif ($nestedPropertyPath.count -eq 2) {
+                        $_ | Add-Member -NotePropertyName $property.Key -NotePropertyValue $_.$($nestedPropertyPath[0]).$($nestedPropertyPath[1])
+                    }
+                    else {
+                        Throw "Invalid nested property path: $($property.Value)"
+                    }
                 }
-                elseif ($nestedPropertyPath.count -eq 2) {
-                    $_ | Add-Member -NotePropertyName $property.Key -NotePropertyValue $_.$($nestedPropertyPath[0]).$($nestedPropertyPath[1])
-                }
-                else {
-                    Throw "Invalid nested property path: $($property.Value)"
-                }
-            }
 
-            if ($_.cloudAdminAccounts.Count -gt 0) {
-                foreach ($cloudAdminAccount in $_.cloudAdminAccounts | Sort-Object -Property securityTierLevel) {
-                    foreach ($property in $cloudAdminAccountProperties.GetEnumerator()) {
-                        $propertyName = "T$($cloudAdminAccount.securityTierLevel)$($property.Key)"
-                        $nestedPropertyPath = $property.Value -split '\.'
-                        if ($nestedPropertyPath.count -eq 3) {
-                            $_ | Add-Member -NotePropertyName $propertyName -NotePropertyValue $cloudAdminAccount.$($nestedPropertyPath[0]).$($nestedPropertyPath[1]).$($nestedPropertyPath[2])
-                        }
-                        elseif ($nestedPropertyPath.count -eq 2) {
-                            $_ | Add-Member -NotePropertyName $propertyName -NotePropertyValue $cloudAdminAccount.$($nestedPropertyPath[0]).$($nestedPropertyPath[1])
-                        }
-                        elseif ($nestedPropertyPath.count -eq 1) {
-                            $_ | Add-Member -NotePropertyName $propertyName -NotePropertyValue $cloudAdminAccount.$($nestedPropertyPath[0])
-                        }
-                        else {
-                            Throw "Invalid nested property path: $($property.Value)"
+                if ($_.cloudAdminAccounts.Count -gt 0) {
+                    foreach ($cloudAdminAccount in $_.cloudAdminAccounts | Sort-Object -Property securityTierLevel) {
+                        foreach ($property in $cloudAdminAccountProperties.GetEnumerator()) {
+                            $propertyName = "T$($cloudAdminAccount.securityTierLevel)$($property.Key)"
+                            $nestedPropertyPath = $property.Value -split '\.'
+                            if ($nestedPropertyPath.count -eq 3) {
+                                $_ | Add-Member -NotePropertyName $propertyName -NotePropertyValue $cloudAdminAccount.$($nestedPropertyPath[0]).$($nestedPropertyPath[1]).$($nestedPropertyPath[2])
+                            }
+                            elseif ($nestedPropertyPath.count -eq 2) {
+                                $_ | Add-Member -NotePropertyName $propertyName -NotePropertyValue $cloudAdminAccount.$($nestedPropertyPath[0]).$($nestedPropertyPath[1])
+                            }
+                            elseif ($nestedPropertyPath.count -eq 1) {
+                                $_ | Add-Member -NotePropertyName $propertyName -NotePropertyValue $cloudAdminAccount.$($nestedPropertyPath[0])
+                            }
+                            else {
+                                Throw "Invalid nested property path: $($property.Value)"
+                            }
                         }
                     }
                 }
+
+                $_ | Select-Object -Property @(
+                    'displayName'
+                    'userPrincipalName'
+                    'onPremisesSamAccountName'
+                    'id'
+                    'accountEnabled'
+                    'createdDateTime'
+                    'deletedDateTime'
+                    'mail'
+                    'companyName'
+                    'department'
+                    'streetAddress'
+                    'city'
+                    'postalCode'
+                    'state'
+                    'country'
+                    'lastSignInDateTime'
+                    'lastNonInteractiveSignInDateTime'
+                    'lastSuccessfulSignInDateTime'
+                    'extensionAttribute1'
+                    'extensionAttribute2'
+                    'extensionAttribute3'
+                    'extensionAttribute4'
+                    'extensionAttribute5'
+                    'extensionAttribute6'
+                    'extensionAttribute7'
+                    'extensionAttribute8'
+                    'extensionAttribute9'
+                    'extensionAttribute10'
+                    'extensionAttribute11'
+                    'extensionAttribute12'
+                    'extensionAttribute13'
+                    'extensionAttribute14'
+                    'extensionAttribute15'
+
+                    'T0displayName'
+                    'T0userPrincipalName'
+                    'T0id'
+                    'T0accountEnabled'
+                    'T0createdDateTime'
+                    'T0deletedDateTime'
+                    'T0mail'
+                    'T0lastSignInDateTime'
+                    'T0lastNonInteractiveSignInDateTime'
+                    'T0lastSuccessfulSignInDateTime'
+                    'T0extensionAttribute1'
+                    'T0extensionAttribute2'
+                    'T0extensionAttribute3'
+                    'T0extensionAttribute4'
+                    'T0extensionAttribute5'
+                    'T0extensionAttribute6'
+                    'T0extensionAttribute7'
+                    'T0extensionAttribute8'
+                    'T0extensionAttribute9'
+                    'T0extensionAttribute10'
+                    'T0extensionAttribute11'
+                    'T0extensionAttribute12'
+                    'T0extensionAttribute13'
+                    'T0extensionAttribute14'
+                    'T0extensionAttribute15'
+
+                    'T1displayName'
+                    'T1userPrincipalName'
+                    'T1id'
+                    'T1accountEnabled'
+                    'T1createdDateTime'
+                    'T1deletedDateTime'
+                    'T1mail'
+                    'T1lastSignInDateTime'
+                    'T1lastNonInteractiveSignInDateTime'
+                    'T1lastSuccessfulSignInDateTime'
+                    'T1extensionAttribute1'
+                    'T1extensionAttribute2'
+                    'T1extensionAttribute3'
+                    'T1extensionAttribute4'
+                    'T1extensionAttribute5'
+                    'T1extensionAttribute6'
+                    'T1extensionAttribute7'
+                    'T1extensionAttribute8'
+                    'T1extensionAttribute9'
+                    'T1extensionAttribute10'
+                    'T1extensionAttribute11'
+                    'T1extensionAttribute12'
+                    'T1extensionAttribute13'
+                    'T1extensionAttribute14'
+                    'T1extensionAttribute15'
+
+                    'T2displayName'
+                    'T2userPrincipalName'
+                    'T2id'
+                    'T2accountEnabled'
+                    'T2createdDateTime'
+                    'T2deletedDateTime'
+                    'T2mail'
+                    'T2lastSignInDateTime'
+                    'T2lastNonInteractiveSignInDateTime'
+                    'T2lastSuccessfulSignInDateTime'
+                    'T2extensionAttribute1'
+                    'T2extensionAttribute2'
+                    'T2extensionAttribute3'
+                    'T2extensionAttribute4'
+                    'T2extensionAttribute5'
+                    'T2extensionAttribute6'
+                    'T2extensionAttribute7'
+                    'T2extensionAttribute8'
+                    'T2extensionAttribute9'
+                    'T2extensionAttribute10'
+                    'T2extensionAttribute11'
+                    'T2extensionAttribute12'
+                    'T2extensionAttribute13'
+                    'T2extensionAttribute14'
+                    'T2extensionAttribute15'
+                )
             }
-
-            $_ | Select-Object -Property @(
-                'displayName'
-                'userPrincipalName'
-                'id'
-                'accountEnabled'
-                'createdDateTime'
-                'deletedDateTime'
-                'mail'
-                'lastSignInDateTime'
-                'lastNonInteractiveSignInDateTime'
-                'lastSuccessfulSignInDateTime'
-                'extensionAttribute1'
-                'extensionAttribute2'
-                'extensionAttribute3'
-                'extensionAttribute4'
-                'extensionAttribute5'
-                'extensionAttribute6'
-                'extensionAttribute7'
-                'extensionAttribute8'
-                'extensionAttribute9'
-                'extensionAttribute10'
-                'extensionAttribute11'
-                'extensionAttribute12'
-                'extensionAttribute13'
-                'extensionAttribute14'
-                'extensionAttribute15'
-
-                'T0displayName'
-                'T0userPrincipalName'
-                'T0id'
-                'T0accountEnabled'
-                'T0createdDateTime'
-                'T0deletedDateTime'
-                'T0mail'
-                'T0lastSignInDateTime'
-                'T0lastNonInteractiveSignInDateTime'
-                'T0lastSuccessfulSignInDateTime'
-                'T0extensionAttribute1'
-                'T0extensionAttribute2'
-                'T0extensionAttribute3'
-                'T0extensionAttribute4'
-                'T0extensionAttribute5'
-                'T0extensionAttribute6'
-                'T0extensionAttribute7'
-                'T0extensionAttribute8'
-                'T0extensionAttribute9'
-                'T0extensionAttribute10'
-                'T0extensionAttribute11'
-                'T0extensionAttribute12'
-                'T0extensionAttribute13'
-                'T0extensionAttribute14'
-                'T0extensionAttribute15'
-
-                'T1displayName'
-                'T1userPrincipalName'
-                'T1id'
-                'T1accountEnabled'
-                'T1createdDateTime'
-                'T1deletedDateTime'
-                'T1mail'
-                'T1lastSignInDateTime'
-                'T1lastNonInteractiveSignInDateTime'
-                'T1lastSuccessfulSignInDateTime'
-                'T1extensionAttribute1'
-                'T1extensionAttribute2'
-                'T1extensionAttribute3'
-                'T1extensionAttribute4'
-                'T1extensionAttribute5'
-                'T1extensionAttribute6'
-                'T1extensionAttribute7'
-                'T1extensionAttribute8'
-                'T1extensionAttribute9'
-                'T1extensionAttribute10'
-                'T1extensionAttribute11'
-                'T1extensionAttribute12'
-                'T1extensionAttribute13'
-                'T1extensionAttribute14'
-                'T1extensionAttribute15'
-
-                'T2displayName'
-                'T2userPrincipalName'
-                'T2id'
-                'T2accountEnabled'
-                'T2createdDateTime'
-                'T2deletedDateTime'
-                'T2mail'
-                'T2lastSignInDateTime'
-                'T2lastNonInteractiveSignInDateTime'
-                'T2lastSuccessfulSignInDateTime'
-                'T2extensionAttribute1'
-                'T2extensionAttribute2'
-                'T2extensionAttribute3'
-                'T2extensionAttribute4'
-                'T2extensionAttribute5'
-                'T2extensionAttribute6'
-                'T2extensionAttribute7'
-                'T2extensionAttribute8'
-                'T2extensionAttribute9'
-                'T2extensionAttribute10'
-                'T2extensionAttribute11'
-                'T2extensionAttribute12'
-                'T2extensionAttribute13'
-                'T2extensionAttribute14'
-                'T2extensionAttribute15'
-            )
-        }
-    } | & {
-        process {
-            foreach ($property in $_.PSObject.Properties) {
-                if ($property.Value -is [DateTime]) {
-                    $property.Value = [DateTime]::Parse($property.Value).ToUniversalTime().ToString('yyyy-MM-ddTHH:mm:ssZ')
+        } | & {
+            process {
+                foreach ($property in $_.PSObject.Properties) {
+                    if ($property.Value -is [DateTime]) {
+                        $property.Value = [DateTime]::Parse($property.Value).ToUniversalTime().ToString('yyyy-MM-ddTHH:mm:ssZ')
+                    }
+                    elseif ($property.Value -is [bool]) {
+                        $property.Value = if ($property.Value) { '1' } else { '0' }
+                    }
+                    elseif ($property.Value -is [array]) {
+                        $property.Value = $property.Value -join ', '
+                    }
                 }
-                elseif ($property.Value -is [bool]) {
-                    $property.Value = if ($property.Value) { '1' } else { '0' }
-                }
-                elseif ($property.Value -is [array]) {
-                    $property.Value = $property.Value -join ', '
-                }
+                $_
             }
-            $_
         }
-    } | ConvertTo-Csv -NoTypeInformation
+    ) -BlobStorageUri $(
+        if (-not [string]::IsNullOrEmpty($BlobContainerUri)) {
+            $BlobContainerUri + '/' + [DateTime]::UtcNow.ToString('yyyyMMddTHHmmssfffZ') + '_Get-PrimaryAccountsByCloudAdminAccount.csv'
+        }
+    )
     return
 }
 
-if ($OutText) { if ($return.Count -eq 0) { return 'No reference user accounts found.' }; $return.userPrincipalName; return }
+if ($OutText) { if ($return.Count -eq 0) { return 'No referenced primary user accounts found.' }; $return.userPrincipalName; return }
 
 if ($return.Count -eq 0) {
-    Write-Information 'No reference user accounts found.' -InformationAction Continue
+    Write-Information 'No referenced primary user accounts found.' -InformationAction Continue
 }
 
 return $return
