@@ -223,7 +223,7 @@ $Constants = [array] @(
         sourceName    = "AV_CloudAdmin_StorageUri"
         mapToVariable = 'StorageUri'
         defaultValue  = $null
-        Regex         = '^https:\/\/[a-z0-9]+\.(blob|file)\.core\.windows\.net\/[a-z0-9-]+(\/[a-z0-9-_.\s]+)*$'
+        Regex         = '^https:\/\/[a-z0-9]+\.(blob|file)\.core\.windows\.net\/[a-z0-9-]+(\/[a-z0-9-_.\s]+)*(\?.*)?$'
     }
     @{
         sourceName    = "AV_CloudAdmin_Webhook"
