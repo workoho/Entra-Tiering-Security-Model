@@ -21,7 +21,7 @@
     Retrieves cloud admin accounts either based on the specified tier, referral user ID, or both.
 
 .DESCRIPTION
-    This script retrieves cloud admin accounts from the Microsoft Graph API based on the specified tier, referral user ID, or both.
+    This script retrieves cloud admin accounts from the Microsoft Graph API based on the specified security tier level, referral user ID, or both.
 
 .PARAMETER ReferralUserId
     Specifies the object ID of the primary user account to search for all associated cloud admin accounts.
@@ -29,8 +29,10 @@
     If not provided, the script will retrieve all cloud admin accounts.
 
 .PARAMETER Tier
-    Specifies the tier level of the cloud admin accounts to get. Should be a value between 0 and 2.
+    Specifies the security tier level of the cloud admin accounts to get. Must be a value between 0 and 2.
     If not provided, the script will search for all tiers.
+
+    May be an array, or a comma-separated string of security tier levels.
 
 .PARAMETER ActiveDays
     Specifies the number of days to consider an account active. If the account has not been active in the last ActiveDays, it will be filtered out.
@@ -60,9 +62,26 @@
 
 .PARAMETER OutCsv
     Specifies whether to output the result as CSV.
+    The 'referralUserAccount' property will be expanded to include additional properties related to the primary user account.
+    Note that for the information to be included in the CSV output, the 'ExpandReferralUserId' parameter must be set to $true.
+    Also, the 'signInActivity' and 'onPremisesExtensionAttributes' properties are expanded into separate columns.
+
+    If the AV_CloudAdmin_StorageUri variable is set in the Azure Automation account, the CSV file is stored in the specified Azure Blob Storage container or Azure File Share.
+    The file name is prefixed with the current date and time in the format 'yyyyMMddTHHmmssfffZ'.
+    Note that the managed identity of the Azure Automation account must have the necessary permissions to write to the specified storage account.
+    That is, the managed identity must have the 'Storage Blob Data Contributor' role for a blob container or the 'Storage File Data SMB Share Contributor' role for a file share.
+    Remember that general roles like 'Owner' or 'Contributor' do not grant write access to storage accounts.
 
 .PARAMETER OutText
     Specifies whether to output the result as text.
+    This will only output the user principal name of the cloud admin accounts.
+
+.OUTPUTS
+    Output may be requested in JSON, CSV, or text format by using one of the parameters -OutJson, -OutCsv, or -OutText.
+    The output includes properties such as 'userPrincipalName', 'accountEnabled', 'lastSuccessfulSignInDateTime', etc.
+
+    If none of these parameters are used, the script returns an object array where each object represents a cloud admin account.
+    and its associated primary user account in the 'referralUserAccount' property.
 #>
 
 [CmdletBinding()]
@@ -97,7 +116,7 @@ $Tier = if ([string]::IsNullOrEmpty($Tier)) { @() } else {
                     [System.Convert]::ToInt32($_)
                 }
                 catch {
-                    Write-Error '[GetPrimaryUserByCloudAdminUser]: - Auto-converting of Tier string to Int32 failed'
+                    Write-Error '[GetCloudAdminAccountsByPrimaryAccount]: - Auto-converting of Tier string to Int32 failed'
                 }
             }
         }
@@ -202,7 +221,7 @@ function Get-CloudAdminAccountsByTier {
         "startsWith(onPremisesExtensionAttributes/extensionAttribute$TierPrefixExtensionAttribute, '$TierPrefix')"
     )
     if (-not [string]::IsNullOrEmpty($ReferralUserId)) {
-        Write-Verbose "[GetCloudAdminAccountsByTier]: - Applying ReferralUserId filter."
+        Write-Verbose "[GetCloudAdminAccountsByPrimaryAccount]: - Applying ReferralUserId filter."
         $filter += "onPremisesExtensionAttributes/extensionAttribute$ReferralUserIdExtensionAttribute eq '$ReferralUserId'"
     }
 
@@ -234,11 +253,11 @@ function Get-CloudAdminAccountsByTier {
                     url     = 'users?$count=true&$filter={0}&$select={1}' -f $(
                         $filter + @(
                             if ($EnabledOnly) {
-                                Write-Verbose "[GetCloudAdminAccountsByTier]: - Applying accountEnabled=true filter."
+                                Write-Verbose "[GetCloudAdminAccountsByPrimaryAccount]: - Applying accountEnabled=true filter."
                                 'accountEnabled eq true'
                             }
                             elseif ($DisabledOnly) {
-                                Write-Verbose "[GetCloudAdminAccountsByTier]: - Applying accountEnabled=false filter."
+                                Write-Verbose "[GetCloudAdminAccountsByPrimaryAccount]: - Applying accountEnabled=false filter."
                                 'accountEnabled eq false'
                             }
                         ) -join ' and '
@@ -264,7 +283,7 @@ function Get-CloudAdminAccountsByTier {
     #endregion -----------------------------------------------------------------
 
     #region Get cloud admin accounts -------------------------------------------
-    Write-Verbose "[GetCloudAdminAccountsByTier]: - Retrieving cloud admin accounts for Tier $Tier."
+    Write-Verbose "[GetCloudAdminAccountsByPrimaryAccount]: - Retrieving cloud admin accounts for Tier $Tier."
     try {
         $response = ./Common_0002__Invoke-MgGraphRequest.ps1 $params
     }

@@ -26,9 +26,10 @@
 .PARAMETER CloudAdminUserId
     Specifies the object ID of the cloud admin account that is used to search for the referenced primary user account.
     May be an array, or a comma-separated string of object IDs or user principal names.
+    If not provided, all cloud admin accounts are retrieved.
 
 .PARAMETER Tier
-    When provided without CloudAdminUserId, all cloud admin accounts of the specified security tier level are returned.
+    When provided without CloudAdminUserId, all cloud admin accounts of the specified security tier level are returned. Must be a value between 0 and 2.
 
     When provided together with CloudAdminUserId, it validates the cloud admin account to filter out accounts that do not match the specified security tier level.
     In case only one security tier level is specified, it is applied to all cloud admin accounts.
@@ -41,9 +42,25 @@
 
 .PARAMETER OutCsv
     Specifies whether to output the result as CSV.
+    The 'cloudAdminAccounts' property is expanded into separate columns for each security tier level.
+    Also, the 'signInActivity' and 'onPremisesExtensionAttributes' properties are expanded into separate columns.
+
+    If the AV_CloudAdmin_StorageUri variable is set in the Azure Automation account, the CSV file is stored in the specified Azure Blob Storage container or Azure File Share.
+    The file name is prefixed with the current date and time in the format 'yyyyMMddTHHmmssfffZ'.
+    Note that the managed identity of the Azure Automation account must have the necessary permissions to write to the specified storage account.
+    That is, the managed identity must have the 'Storage Blob Data Contributor' role for a blob container or the 'Storage File Data SMB Share Contributor' role for a file share.
+    Remember that general roles like 'Owner' or 'Contributor' do not grant write access to storage accounts.
 
 .PARAMETER OutText
     Specifies whether to output the result as text.
+    This will only output the user principal name of the primary user accounts.
+
+.OUTPUTS
+    Output may be requested in JSON, CSV, or text format by using one of the parameters -OutJson, -OutCsv, or -OutText.
+    The output includes properties such as 'userPrincipalName', 'accountEnabled', 'lastSuccessfulSignInDateTime', etc.
+
+    If none of these parameters are used, the script returns an object array where each object represents a primary user account
+    and its associated cloud admin accounts in the 'cloudAdminAccounts' property.
 #>
 
 [CmdletBinding()]
@@ -72,7 +89,7 @@ $Tier = if ([string]::IsNullOrEmpty($Tier)) { @() } else {
                     [System.Convert]::ToInt32($_)
                 }
                 catch {
-                    Write-Error '[GetPrimaryUserByCloudAdminUser]: - Auto-converting of Tier string to Int32 failed'
+                    Write-Error '[GetPrimaryAccountsByCloudAdminAccount]: - Auto-converting of Tier string to Int32 failed'
                 }
             }
         }
