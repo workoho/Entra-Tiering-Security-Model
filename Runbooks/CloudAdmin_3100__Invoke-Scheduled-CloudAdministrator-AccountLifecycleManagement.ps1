@@ -98,8 +98,7 @@ Param (
     [Array]$Tier,
     [Boolean]$OutJson,
     [Boolean]$OutCsv,
-    [Boolean]$OutText,
-    [Boolean]$OutObject
+    [Boolean]$OutText
 )
 
 #region [COMMON] PARAMETER COUNT VALIDATION ------------------------------------
