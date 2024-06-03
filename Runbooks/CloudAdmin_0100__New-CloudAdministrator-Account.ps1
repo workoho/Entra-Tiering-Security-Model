@@ -12,9 +12,9 @@
 .REQUIREDSCRIPTS CloudAdmin_0000__Common_0000__Get-ConfigurationConstants.ps1
 .EXTERNALSCRIPTDEPENDENCIES https://github.com/workoho/AzAuto-Common-Runbook-FW
 .RELEASENOTES
-    Version 1.3.0 (2024-05-18)
-    - Fixed output for total runtime.
-    - Removed AccountTypeExtensionAttributeSuffix settings because it cannot be used properly as Microsoft Graph filter.
+    Version 1.4.0 (2024-06-08)
+    - Use LastSuccessfulSignInDateTime to determine if user is active.
+    - Improved batch processing by converting comma-separated values to arrays.
 #>
 
 <#
@@ -229,6 +229,32 @@ Param (
 )
 
 #region [COMMON] PARAMETER COUNT VALIDATION ------------------------------------
+$ReferralUserId = if ([string]::IsNullOrEmpty($ReferralUserId)) { @() } else {
+    @($ReferralUserId) | & { process { $_ -split '\s*,\s*' } } | & { process { if (-not [string]::IsNullOrEmpty($_)) { $_ } } }
+}
+$Tier = if ([string]::IsNullOrEmpty($Tier)) { @() } else {
+    @($Tier) | & { process { $_ -split '\s*,\s*' } } | & {
+        process {
+            if (-not [string]::IsNullOrEmpty($_)) {
+                try {
+                    [System.Convert]::ToInt32($_)
+                    if ($_ -lt 0 -or $_ -gt 2) {
+                        Throw 'Tier must be a value between 0 and 2.'
+                    }
+                }
+                catch {
+                    Throw "[NewCloudAdministratorAccount]: - Auto-converting of Tier string to Int32 failed: $_"
+                }
+            }
+        }
+    }
+}
+$UserPhotoUrl = if ([string]::IsNullOrEmpty($UserPhotoUrl)) { @() } else {
+    @($UserPhotoUrl) | & { process { $_ -split '\s*,\s*' } } | & { process { if ([string]::IsNullOrEmpty($_)) { $null } else { $_ } } }
+}
+$RequestDedicatedAccount = if ([string]::IsNullOrEmpty($RequestDedicatedAccount)) { @() } else {
+    @($RequestDedicatedAccount) | & { process { $_ -split '\s*,\s*' } } | & { process { if ([string]::IsNullOrEmpty($_)) { $null } else { $_ } } }
+}
 if (
     ($ReferralUserId.Count -gt 1) -and
     (
@@ -1297,13 +1323,11 @@ Function ProcessReferralUser ($ReferralUserId, $LocalUserId, $Tier, $UserPhotoUr
 
         if ($InternalReferenceAccountLastSignInMinDaysBefore -gt 0) { $InternalReferenceAccountLastSignInMinDaysBefore = [int]$InternalReferenceAccountLastSignInMinDaysBefore * -1 }
         if (
-            -Not ($refUserObjSignInActivity) -or
-            -Not ($refUserObjSignInActivity.LastSignInDateTime) -or
-            -Not ($refUserObjSignInActivity.LastNonInteractiveSignInDateTime) -or
+            -Not $refUserObjSignInActivity -or
+            -Not $refUserObjSignInActivity.LastSuccessfulSignInDateTime -or
             (
-                ($InternalReferenceAccountLastSignInMinDaysBefore -ne 0) -and
-                ($refUserObjSignInActivity.LastSignInDateTime -lt $return.Job.CreationTime.AddDays($InternalReferenceAccountLastSignInMinDaysBefore)) -and
-                ($refUserObjSignInActivity.LastNonInteractiveSignInDateTime -lt $return.Job.CreationTime.AddDays($InternalReferenceAccountLastSignInMinDaysBefore))
+                $InternalReferenceAccountLastSignInMinDaysBefore -ne 0 -and
+                $refUserObjSignInActivity.LastSuccessfulSignInDateTime -lt $return.Job.CreationTime.AddDays($InternalReferenceAccountLastSignInMinDaysBefore)
             )
         ) {
             [void] $script:returnError.Add(( ./Common_0000__Write-Error.ps1 @{
@@ -1516,13 +1540,11 @@ Function ProcessReferralUser ($ReferralUserId, $LocalUserId, $Tier, $UserPhotoUr
 
         if ($ExternalReferenceAccountLastSignInMinDaysBefore -gt 0) { $ExternalReferenceAccountLastSignInMinDaysBefore = [int]$ExternalReferenceAccountLastSignInMinDaysBefore * -1 }
         if (
-            -Not ($refUserObjSignInActivity) -or
-            -Not ($refUserObjSignInActivity.LastSignInDateTime) -or
-            -Not ($refUserObjSignInActivity.LastNonInteractiveSignInDateTime) -or
+            -Not $refUserObjSignInActivity -or
+            -Not $refUserObjSignInActivity.LastSuccessfulSignInDateTime -or
             (
-                ($ExternalReferenceAccountLastSignInMinDaysBefore -ne 0) -and
-                ($refUserObjSignInActivity.LastSignInDateTime -lt $return.Job.CreationTime.AddDays($ExternalReferenceAccountLastSignInMinDaysBefore)) -and
-                ($refUserObjSignInActivity.LastNonInteractiveSignInDateTime -lt $return.Job.CreationTime.AddDays($ExternalReferenceAccountLastSignInMinDaysBefore))
+                $ExternalReferenceAccountLastSignInMinDaysBefore -ne 0 -and
+                $refUserObjSignInActivity.LastSuccessfulSignInDateTime -lt $return.Job.CreationTime.AddDays($ExternalReferenceAccountLastSignInMinDaysBefore)
             )
         ) {
             [void] $script:returnError.Add(( ./Common_0000__Write-Error.ps1 @{
