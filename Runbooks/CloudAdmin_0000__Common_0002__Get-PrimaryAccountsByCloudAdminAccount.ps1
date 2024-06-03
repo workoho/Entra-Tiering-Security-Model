@@ -87,9 +87,12 @@ $Tier = if ([string]::IsNullOrEmpty($Tier)) { @() } else {
             if (-not [string]::IsNullOrEmpty($_)) {
                 try {
                     [System.Convert]::ToInt32($_)
+                    if ($_ -lt 0 -or $_ -gt 2) {
+                        Throw 'Tier must be a value between 0 and 2.'
+                    }
                 }
                 catch {
-                    Write-Error '[GetPrimaryAccountsByCloudAdminAccount]: - Auto-converting of Tier string to Int32 failed'
+                    Throw "[GetPrimaryAccountsByCloudAdminAccount]: - Auto-converting of Tier string to Int32 failed: $_"
                 }
             }
         }

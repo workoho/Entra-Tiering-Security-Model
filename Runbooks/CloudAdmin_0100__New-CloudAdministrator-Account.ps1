@@ -181,20 +181,20 @@
     Configuration settings can be obtained from CloudAdmin_0000__Common_0000__Get-ConfigurationConstants.ps1.
 
 .EXAMPLE
-    CloudAdmin_0100__New-CloudAdministrator-Account-V1.ps1 -ReferralUserId user1@contoso.com -Tier 0
+    CloudAdmin_0100__New-CloudAdministrator-Account.ps1 -ReferralUserId user1@contoso.com -Tier 0
 
 .EXAMPLE
-    CloudAdmin_0100__New-CloudAdministrator-Account-V1.ps1 -ReferralUserId user2@contoso.com -Tier 0 -UserPhotoUrl https://example.com/assets/Tier0-Admins.png
+    CloudAdmin_0100__New-CloudAdministrator-Account.ps1 -ReferralUserId user2@contoso.com -Tier 0 -UserPhotoUrl https://example.com/assets/Tier0-Admins.png
 
     Provide a different URL for the photo to be uploaded to the new Cloud Administrator account.
 
 .EXAMPLE
-    CloudAdmin_0100__New-CloudAdministrator-Account-V1.ps1 -ReferralUserId user3@contoso.com -Tier 1 -RequestDedicatedAccount true
+    CloudAdmin_0100__New-CloudAdministrator-Account.ps1 -ReferralUserId user3@contoso.com -Tier 1 -RequestDedicatedAccount true
 
     Explicitly request to create a dedicated account for Cloud Administration in Tier 1 instead of assigning permissions to the referral user ID.
 
 .EXAMPLE
-    $csv = Get-Content list.csv | ConvertFrom-Csv; CloudAdmin_0100__New-CloudAdministrator-Account-V1.ps1 -ReferralUserId $csv.ReferralUserId -Tier $csv.Tier -UserPhotoUrl $csv.UserPhotoUrl -RequestDedicatedAccount $csv.RequestDedicatedAccount
+    $csv = Get-Content list.csv | ConvertFrom-Csv; CloudAdmin_0100__New-CloudAdministrator-Account.ps1 -ReferralUserId $csv.ReferralUserId -Tier $csv.Tier -UserPhotoUrl $csv.UserPhotoUrl -RequestDedicatedAccount $csv.RequestDedicatedAccount
 
     BATCH PROCESSING
     ================
@@ -283,7 +283,7 @@ $returnError = [System.Collections.ArrayList]::new()
 
 #region [COMMON] CONCURRENT JOBS -----------------------------------------------
 $concurrentJobsTimeoutError = $false
-$ConcurrentJobsWaitStartTime = (Get-Date).ToUniversalTime()
+$ConcurrentJobsWaitStartTime = [DateTime]::UtcNow
 if ((./Common_0002__Wait-AzAutomationConcurrentJob.ps1) -ne $true) {
     $concurrentJobsTimeoutError = $true
     [void] $script:returnError.Add(( ./Common_0000__Write-Error.ps1 @{
@@ -295,7 +295,7 @@ if ((./Common_0002__Wait-AzAutomationConcurrentJob.ps1) -ne $true) {
                 CategoryReason    = "Maximum job runtime was reached."
             }))
 }
-$ConcurrentJobsWaitEndTime = (Get-Date).ToUniversalTime()
+$ConcurrentJobsWaitEndTime = [DateTime]::UtcNow
 $ConcurrentJobsTime = $ConcurrentJobsWaitEndTime - $ConcurrentJobsWaitStartTime
 #endregion ---------------------------------------------------------------------
 
@@ -3110,7 +3110,7 @@ $return.Information = $returnInformation
 $return.Warning = $returnWarning
 $return.Error = $returnError
 if ($returnError.Count -eq 0) { $return.Success = $true } else { $return.Success = $false }
-$return.Job.EndTime = (Get-Date).ToUniversalTime()
+$return.Job.EndTime = [DateTime]::UtcNow
 $return.Job.Runtime = $return.Job.EndTime - $return.Job.StartTime
 $return.Job.Waittime = $return.Job.StartTime - $return.Job.CreationTime
 

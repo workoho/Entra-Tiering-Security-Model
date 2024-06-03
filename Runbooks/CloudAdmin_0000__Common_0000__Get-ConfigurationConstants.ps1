@@ -455,6 +455,26 @@ $Constants = [array] @(
         defaultValue  = '-'
         Regex         = '^.{1,2}$'
     }
+    @{
+        sourceName    = "AV_CloudAdminTier0_LifecycleDelete"
+        mapToVariable = 'LifecycleDelete_Tier0'
+        defaultValue  = $false
+    }
+    @{
+        sourceName    = "AV_CloudAdminTier0_LifecycleRestoreAfterDelete"
+        mapToVariable = 'LifecycleRestoreAfterDelete_Tier0'
+        defaultValue  = $false
+    }
+    @{
+        sourceName    = "AV_CloudAdminTier0_LifecycleDisable"
+        mapToVariable = 'LifecycleDisable_Tier0'
+        defaultValue  = $false
+    }
+    @{
+        sourceName    = "AV_CloudAdminTier0_LifecycleEnableAfterDisable"
+        mapToVariable = 'LifecycleEnableAfterDisable_Tier0'
+        defaultValue  = $false
+    }
     #endregion
 
     #region Tier 1 Constants
@@ -667,6 +687,26 @@ $Constants = [array] @(
         defaultValue  = '-'
         Regex         = '^.{1,2}$'
     }
+    @{
+        sourceName    = "AV_CloudAdminTier0_LifecycleDelete"
+        mapToVariable = 'LifecycleDelete_Tier1'
+        defaultValue  = $false
+    }
+    @{
+        sourceName    = "AV_CloudAdminTier0_LifecycleRestoreAfterDelete"
+        mapToVariable = 'LifecycleRestoreAfterDelete_Tier1'
+        defaultValue  = $false
+    }
+    @{
+        sourceName    = "AV_CloudAdminTier0_LifecycleDisable"
+        mapToVariable = 'LifecycleDisable_Tier1'
+        defaultValue  = $false
+    }
+    @{
+        sourceName    = "AV_CloudAdminTier0_LifecycleEnableAfterDisable"
+        mapToVariable = 'LifecycleEnableAfterDisable_Tier1'
+        defaultValue  = $false
+    }
     #endregion
 
     #region Tier 2 Constants
@@ -878,6 +918,26 @@ $Constants = [array] @(
         mapToVariable = 'UserPrincipalNameSuffixSeparator_Tier2'
         defaultValue  = '-'
         Regex         = '^.{1,2}$'
+    }
+    @{
+        sourceName    = "AV_CloudAdminTier0_LifecycleDelete"
+        mapToVariable = 'LifecycleDelete_Tier2'
+        defaultValue  = $false
+    }
+    @{
+        sourceName    = "AV_CloudAdminTier0_LifecycleRestoreAfterDelete"
+        mapToVariable = 'LifecycleRestoreAfterDelete_Tier2'
+        defaultValue  = $false
+    }
+    @{
+        sourceName    = "AV_CloudAdminTier0_LifecycleDisable"
+        mapToVariable = 'LifecycleDisable_Tier2'
+        defaultValue  = $false
+    }
+    @{
+        sourceName    = "AV_CloudAdminTier0_LifecycleEnableAfterDisable"
+        mapToVariable = 'LifecycleEnableAfterDisable_Tier2'
+        defaultValue  = $false
     }
     #endregion
 )

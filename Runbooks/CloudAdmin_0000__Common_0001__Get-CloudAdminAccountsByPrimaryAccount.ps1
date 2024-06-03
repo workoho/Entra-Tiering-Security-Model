@@ -105,8 +105,8 @@ $StartupVariables = (Get-Variable | & { process { $_.Name } })      # Remember e
 #region [COMMON] PARAMETER VALIDATION ------------------------------------------
 
 # Allow comma-separated values for ReferralUserId and Tier
-$CloudAdminUserId = if ([string]::IsNullOrEmpty($CloudAdminUserId)) { @() } else {
-    @($CloudAdminUserId) | & { process { $_ -split '\s*,\s*' } } | & { process { if (-not [string]::IsNullOrEmpty($_)) { $_ } } }
+$ReferralUserId = if ([string]::IsNullOrEmpty($ReferralUserId)) { @() } else {
+    @($ReferralUserId) | & { process { $_ -split '\s*,\s*' } } | & { process { if (-not [string]::IsNullOrEmpty($_)) { $_ } } }
 }
 $Tier = if ([string]::IsNullOrEmpty($Tier)) { @() } else {
     @($Tier) | & { process { $_ -split '\s*,\s*' } } | & {
@@ -114,9 +114,12 @@ $Tier = if ([string]::IsNullOrEmpty($Tier)) { @() } else {
             if (-not [string]::IsNullOrEmpty($_)) {
                 try {
                     [System.Convert]::ToInt32($_)
+                    if ($_ -lt 0 -or $_ -gt 2) {
+                        Throw 'Tier must be a value between 0 and 2.'
+                    }
                 }
                 catch {
-                    Write-Error '[GetCloudAdminAccountsByPrimaryAccount]: - Auto-converting of Tier string to Int32 failed'
+                    Throw "[GetCloudAdminAccountsByPrimaryAccount]: - Auto-converting of Tier string to Int32 failed: $_"
                 }
             }
         }
@@ -695,6 +698,7 @@ if ($OutCsv) {
         'refOnPremisesSamAccountName'         = 'referralUserAccount.onPremisesSamAccountName'
         'refId'                               = 'referralUserAccount.id'
         'refAccountEnabled'                   = 'referralUserAccount.accountEnabled'
+        'refCreatedDateTime'                  = 'referralUserAccount.createdDateTime'
         'refDeletedDateTime'                  = 'referralUserAccount.deletedDateTime'
         'refMail'                             = 'referralUserAccount.mail'
         'refCompanyName'                      = 'referralUserAccount.companyName'
@@ -780,6 +784,7 @@ if ($OutCsv) {
                     'refOnPremisesSamAccountName'
                     'refId'
                     'refAccountEnabled'
+                    'refCreatedDateTime'
                     'refDeletedDateTime'
                     'refMail'
                     'refCompanyName'

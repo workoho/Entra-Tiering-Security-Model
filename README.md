@@ -343,13 +343,13 @@ The following steps only need to be performed once to get you started:
       You may also pay attention at the specific settings that are not quite common, like enabling [Restricted Management](https://learn.microsoft.com/en-us/entra/identity/role-based-access-control/admin-units-restricted-management), or restricting the membership visibility. Note that these two settings can only be set during creation and not changed afterwards.
 
       The `MembershipRule` setting for dynamic membership is also something to look at. If you want to change the default naming schema for your dedicated Cloud Administrator accounts, you will need to adjust the rules accordingly.
-      Please note that in that case you will also need to add additional Automation Variables for the `CloudAdmin_0100__New-CloudAdministrator-Account-V1.ps1` runbook to know about your desired prefix and suffix preferences.
+      Please note that in that case you will also need to add additional Automation Variables for the `CloudAdmin_0100__New-CloudAdministrator-Account.ps1` runbook to know about your desired prefix and suffix preferences.
 
    3. `Group`
 
       Review the `DisplayName` for the cloud security groups to be created.
 
-      You should also look at the `InitialLicenseAssignment` to validate the license assignment setup for the group, or remove that part if you prefer to handle this manually after the groups were created. Essentially, an Exchange Online mailbox is mandatory for each dedicated Cloud Administrator account that the `CloudAdmin_0100__New-CloudAdministrator-Account-V1.ps1` runbook will create. The example provides details to assign Exchange Online Kiosk license and only enable Exchange Online service plan of it.
+      You should also look at the `InitialLicenseAssignment` to validate the license assignment setup for the group, or remove that part if you prefer to handle this manually after the groups were created. Essentially, an Exchange Online mailbox is mandatory for each dedicated Cloud Administrator account that the `CloudAdmin_0100__New-CloudAdministrator-Account.ps1` runbook will create. The example provides details to assign Exchange Online Kiosk license and only enable Exchange Online service plan of it.
 
       > :information_source: You may need to add additional licensing for Microsoft Entra ID P2 to follow corporate compliance policies. If the referring primary user account is already licensed for it, and you can ensure that the dedicated Cloud Administrator account is used exclusively by the same natural person, you are generally entitled to use the features on both accounts, unless it is technically necessary to assign a license to both accounts. This assumption is based on the [Microsoft Universal License Terms for Online Services](https://www.microsoft.com/licensing/terms/product/ForOnlineServices/all) (search for _"Customer must acquire and assign the appropriate subscription licenses ..."_ in the _Licensing the Online Services_ section). **We recommend to validate this with your Microsoft sales representative for your special situation.** We do not provide any legal advice at this point.
       >
@@ -361,7 +361,7 @@ The following steps only need to be performed once to get you started:
       > ```
 
       The `MembershipRule` setting for dynamic membership is again something to look at here as well. If you want to change the default naming schema for your dedicated cloud-native Cloud Administrator accounts, you will need to adjust the rules accordingly.
-      Please note that in that case you will also need to add additional Automation Variables for the `CloudAdmin_0100__New-CloudAdministrator-Account-V1.ps1` to know about your desired prefix and suffix settings.
+      Please note that in that case you will also need to add additional Automation Variables for the `CloudAdmin_0100__New-CloudAdministrator-Account.ps1` to know about your desired prefix and suffix settings.
 
 7. Start the initial setup.
 
@@ -549,7 +549,7 @@ For the Management Restricted Administrative Units used for Cloud Administration
 
   _Justification:_ Allow to manage the groups belonging to the Cloud Administration Tiering Model.
 
-  <u>**Important:**</u> It is considered a high risk to grant access to these groups. Getting access to these groups will allow to manage Cloud Administrator access outside of the Automation Account and without the restrictions and checks the `CloudAdmin_0100__New-CloudAdministrator-Account-V1.ps1` runbook enforces for you. Be aware that this might lead to a security breach if handled in the wrong way!
+  <u>**Important:**</u> It is considered a high risk to grant access to these groups. Getting access to these groups will allow to manage Cloud Administrator access outside of the Automation Account and without the restrictions and checks the `CloudAdmin_0100__New-CloudAdministrator-Account.ps1` runbook enforces for you. Be aware that this might lead to a security breach if handled in the wrong way!
 
 <a id="3-setup-microsoft-graph-scopes"></a>**3. Microsoft Graph Command Line Tools**:
 
