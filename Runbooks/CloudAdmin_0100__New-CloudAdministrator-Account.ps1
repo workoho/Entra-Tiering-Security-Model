@@ -571,7 +571,7 @@ $persistentError = $false
 $Iteration = 0
 
 $return = @{
-    Job = ./Common_0003__Get-AzAutomationJobInfo.ps1
+    Job = ./Common_0002__Get-AzAutomationJobInfo.ps1
 }
 if ($ConcurrentJobsWaitStartTime) { $return.Job.ConcurrentJobsWaitStartTime = $ConcurrentJobsWaitStartTime }
 if ($ConcurrentJobsWaitEndTime) { $return.Job.ConcurrentJobsWaitEndTime = $ConcurrentJobsWaitEndTime }

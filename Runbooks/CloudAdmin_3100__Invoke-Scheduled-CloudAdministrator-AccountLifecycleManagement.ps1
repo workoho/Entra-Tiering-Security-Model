@@ -267,7 +267,7 @@ $DirectoryPermissions = ./Common_0003__Confirm-MgDirectoryRoleActiveAssignment.p
 
 #region [COMMON] INITIALIZE SCRIPT VARIABLES -----------------------------------
 $return = @{
-    Job = ./Common_0003__Get-AzAutomationJobInfo.ps1
+    Job = ./Common_0002__Get-AzAutomationJobInfo.ps1
 }
 #endregion ---------------------------------------------------------------------
 

@@ -180,7 +180,7 @@ if ($CloudAdminUserId.Count -gt 0) {
 
                     try {
                         $userObj = @(
-                            ./Common_0003__Find-MgUserWithSoftDeleted.ps1 -UserId $_ -Property @(
+                            ./Common_0002__Find-MgUserWithSoftDeleted.ps1 -UserId $_ -Property @(
                                 'displayName'
                                 'userPrincipalName'
                                 'id'
@@ -252,7 +252,7 @@ if ($CloudAdminUserId.Count -gt 0) {
 
                 try {
                     $refUserObj = @(
-                        ./Common_0003__Find-MgUserWithSoftDeleted.ps1 -UserId $userObj.onPremisesExtensionAttributes."extensionAttribute$ReferenceExtensionAttribute" -Property @(
+                        ./Common_0002__Find-MgUserWithSoftDeleted.ps1 -UserId $userObj.onPremisesExtensionAttributes."extensionAttribute$ReferenceExtensionAttribute" -Property @(
                             'displayName'
                             'userPrincipalName'
                             'onPremisesSamAccountName'

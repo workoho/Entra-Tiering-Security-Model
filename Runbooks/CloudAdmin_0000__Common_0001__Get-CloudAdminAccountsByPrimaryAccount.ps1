@@ -385,7 +385,7 @@ function Get-CloudAdminAccountsByTier {
                                 Write-Verbose "[GetCloudAdminAccountByTier]: - Expanding referral user account for $($_.userPrincipalName)."
                                 try {
                                     $_ | Add-Member -MemberType NoteProperty -Name 'referralUserAccount' -Value (
-                                        @(./Common_0003__Find-MgUserWithSoftDeleted.ps1 -UserId $_.onPremisesExtensionAttributes."extensionAttribute$ReferralUserIdExtensionAttribute" -Property @(
+                                        @(./Common_0002__Find-MgUserWithSoftDeleted.ps1 -UserId $_.onPremisesExtensionAttributes."extensionAttribute$ReferralUserIdExtensionAttribute" -Property @(
                                                 'displayName'
                                                 'userPrincipalName'
                                                 'onPremisesSamAccountName'
@@ -585,7 +585,7 @@ if ($ReferralUserId) {
 
             Write-Verbose "[GetCloudAdminAccount]: - Processing ReferralUserId-${_}: $($ReferralUserId[$_])"
             try {
-                $refUserId = @(./Common_0003__Find-MgUserWithSoftDeleted.ps1 -UserId $LocalUserId[$_])[0].Id
+                $refUserId = @(./Common_0002__Find-MgUserWithSoftDeleted.ps1 -UserId $LocalUserId[$_])[0].Id
             }
             catch {
                 Throw $_
