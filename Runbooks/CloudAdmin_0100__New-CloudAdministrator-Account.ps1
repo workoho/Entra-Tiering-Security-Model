@@ -1,5 +1,5 @@
 <#PSScriptInfo
-.VERSION 1.3.0
+.VERSION 1.4.1
 .GUID 03b78b5d-1e83-44bc-83ce-a5c0f101461b
 .AUTHOR Julian Pawlowski
 .COMPANYNAME Workoho GmbH
@@ -12,9 +12,8 @@
 .REQUIREDSCRIPTS CloudAdmin_0000__Common_0000__Get-ConfigurationConstants.ps1
 .EXTERNALSCRIPTDEPENDENCIES https://github.com/workoho/AzAuto-Common-Runbook-FW
 .RELEASENOTES
-    Version 1.4.0 (2024-06-08)
-    - Use LastSuccessfulSignInDateTime to determine if user is active.
-    - Improved batch processing by converting comma-separated values to arrays.
+    Version 1.4.1 (2024-06-06)
+    - Changed the way the script imports the required Microsoft Graph modules, which must only be imported AFTER the connection to Azure Graph API was established.
 #>
 
 <#
@@ -267,16 +266,6 @@ if (
 }
 #endregion ---------------------------------------------------------------------
 
-#region [COMMON] IMPORT MODULES ------------------------------------------------
-./Common_0000__Import-Module.ps1 -Modules @(
-    @{ Name = 'Microsoft.Graph.Beta.Identity.DirectoryManagement'; MinimumVersion = '2.0'; MaximumVersion = '2.65535' }
-    @{ Name = 'Microsoft.Graph.Beta.Groups'; MinimumVersion = '2.0'; MaximumVersion = '2.65535' }
-    @{ Name = 'Microsoft.Graph.Beta.Users'; MinimumVersion = '2.0'; MaximumVersion = '2.65535' }
-    @{ Name = 'Microsoft.Graph.Beta.Users.Actions'; MinimumVersion = '2.0'; MaximumVersion = '2.65535' }
-    @{ Name = 'Microsoft.Graph.Beta.Applications'; MinimumVersion = '2.0'; MaximumVersion = '2.65535' }
-) 1> $null
-#endregion ---------------------------------------------------------------------
-
 #region [COMMON] OPEN CONNECTIONS: Microsoft Graph -----------------------------
 ./Common_0001__Connect-MgGraph.ps1 -Scopes @(
     # Read-only permissions
@@ -295,9 +284,19 @@ if (
 #endregion ---------------------------------------------------------------------
 
 #region [COMMON] ENVIRONMENT ---------------------------------------------------
-./Common_0002__Import-AzAutomationVariableToPSEnv.ps1 1> $null      # Implicitly connects to Azure Cloud
+./Common_0002__Import-AzAutomationVariableToPSEnv.ps1 1> $null
 $Constants = ./CloudAdmin_0000__Common_0000__Get-ConfigurationConstants.ps1
 ./Common_0000__Convert-PSEnvToPSScriptVariable.ps1 -Variable $Constants 1> $null
+#endregion ---------------------------------------------------------------------
+
+#region [COMMON] IMPORT MODULES ------------------------------------------------
+./Common_0000__Import-Module.ps1 -Modules @(
+    @{ Name = 'Microsoft.Graph.Beta.Identity.DirectoryManagement'; MinimumVersion = '2.0'; MaximumVersion = '2.65535' }
+    @{ Name = 'Microsoft.Graph.Beta.Groups'; MinimumVersion = '2.0'; MaximumVersion = '2.65535' }
+    @{ Name = 'Microsoft.Graph.Beta.Users'; MinimumVersion = '2.0'; MaximumVersion = '2.65535' }
+    @{ Name = 'Microsoft.Graph.Beta.Users.Actions'; MinimumVersion = '2.0'; MaximumVersion = '2.65535' }
+    @{ Name = 'Microsoft.Graph.Beta.Applications'; MinimumVersion = '2.0'; MaximumVersion = '2.65535' }
+) 1> $null
 #endregion ---------------------------------------------------------------------
 
 #region [COMMON] INITIALIZE RETURN VARIABLES -----------------------------------
