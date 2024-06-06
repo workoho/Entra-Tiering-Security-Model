@@ -1,5 +1,5 @@
 <#PSScriptInfo
-.VERSION 1.0.0
+.VERSION 1.1.0
 .GUID 04a626b1-2f12-4afa-a789-76e97898cf5b
 .AUTHOR Julian Pawlowski
 .COMPANYNAME Workoho GmbH
@@ -12,8 +12,8 @@
 .REQUIREDSCRIPTS CloudAdmin_0000__Common_0000__Get-ConfigurationConstants.ps1
 .EXTERNALSCRIPTDEPENDENCIES https://github.com/workoho/AzAuto-Common-Runbook-FW
 .RELEASENOTES
-    Version 1.0.0 (2024-05-29)
-    - Initial release.
+    Version 1.0.0 (2024-06-06)
+    - use Common_0001__Invoke-MgGraphRequest.ps1 instead of Common_0002__Invoke-MgGraphRequest.ps1
 #>
 
 <#
@@ -288,7 +288,7 @@ function Get-CloudAdminAccountsByTier {
     #region Get cloud admin accounts -------------------------------------------
     Write-Verbose "[GetCloudAdminAccountsByPrimaryAccount]: - Retrieving cloud admin accounts for Tier $Tier."
     try {
-        $response = ./Common_0002__Invoke-MgGraphRequest.ps1 $params
+        $response = ./Common_0001__Invoke-MgGraphRequest.ps1 $params
     }
     catch {
         Throw $_
@@ -462,7 +462,7 @@ function Get-CloudAdminAccountsByTier {
             [System.GC]::Collect()
             [System.GC]::WaitForPendingFinalizers()
             try {
-                $response = ./Common_0002__Invoke-MgGraphRequest.ps1 $params
+                $response = ./Common_0001__Invoke-MgGraphRequest.ps1 $params
             }
             catch {
                 Throw $_
@@ -525,7 +525,7 @@ $TierPrefix = @(
 )
 
 try {
-    $VerifiedDomains = (./Common_0002__Invoke-MgGraphRequest.ps1 @{ Method = 'GET'; Uri = 'https://graph.microsoft.com/v1.0/organization'; OutputType = 'PSObject'; ErrorAction = 'Stop'; Verbose = $false; Debug = $false }).Value.VerifiedDomains
+    $VerifiedDomains = (./Common_0001__Invoke-MgGraphRequest.ps1 @{ Method = 'GET'; Uri = 'https://graph.microsoft.com/v1.0/organization'; OutputType = 'PSObject'; ErrorAction = 'Stop'; Verbose = $false; Debug = $false }).Value.VerifiedDomains
 }
 catch {
     Throw $_
