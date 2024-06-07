@@ -370,8 +370,8 @@ $AdminUnitIsMemberManagementRestricted = $false
 
         if (
             ($_ -eq $CloudAdminRestrictedAdminUnitId) -and
-            ($null -ne $AdminUnitObj.AdditionalProperties.membershipRuleProcessingState) -and
-            ($AdminUnitObj.AdditionalProperties.membershipRuleProcessingState -eq 'On')
+            ($null -ne $AdminUnitObj.membershipRuleProcessingState) -and
+            ($AdminUnitObj.membershipRuleProcessingState -eq 'On')
         ) {
             Throw "[AdministrativeUnitValidation]: - Admin Unit $($AdminUnitObj.DisplayName) ($($AdminUnitObj.Id)): Must use static membership only as it is intended to contain privileged role groups only."
         }
@@ -382,8 +382,8 @@ $AdminUnitIsMemberManagementRestricted = $false
                 $AccountAdminUnitId_Tier1
                 $AccountAdminUnitId_Tier2
             ) -and (
-                ($null -eq $AdminUnitObj.AdditionalProperties.membershipRuleProcessingState) -or
-                ($AdminUnitObj.AdditionalProperties.membershipRuleProcessingState -ne 'On')
+                ($null -eq $AdminUnitObj.membershipRuleProcessingState) -or
+                ($AdminUnitObj.membershipRuleProcessingState -ne 'On')
             )
         ) {
             $script:AllowPrivilegedRoleAdministratorInAzureAutomation = $true
@@ -2381,7 +2381,7 @@ Function ProcessReferralUser ($ReferralUserId, $LocalUserId, $Tier, $UserPhotoUr
         ErrorAction          = 'SilentlyContinue'
     }
     if ($AdminUnitObj -and ($null -eq (Get-MgBetaAdministrativeUnitMemberAsUser @params))) {
-        if (-not $AdminUnitObj.AdditionalProperties.membershipRuleProcessingState -or ($AdminUnitObj.AdditionalProperties.membershipRuleProcessingState -ne 'On')) {
+        if (-not $AdminUnitObj.membershipRuleProcessingState -or ($AdminUnitObj.membershipRuleProcessingState -ne 'On')) {
             Write-Verbose "[ProcessReferralUserDedicatedAccountUpdate]: - Adding account to Admin Unit $($AdminUnitObj.DisplayName) ($($AdminUnitObj.Id))"
             $params = @{
                 OutputType  = 'PSObject'
