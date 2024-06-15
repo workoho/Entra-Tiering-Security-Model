@@ -1,5 +1,5 @@
 <#PSScriptInfo
-.VERSION 1.4.1
+.VERSION 1.4.2
 .GUID 03b78b5d-1e83-44bc-83ce-a5c0f101461b
 .AUTHOR Julian Pawlowski
 .COMPANYNAME Workoho GmbH
@@ -12,8 +12,8 @@
 .REQUIREDSCRIPTS CloudAdmin_0000__Common_0000__Get-ConfigurationConstants.ps1
 .EXTERNALSCRIPTDEPENDENCIES https://github.com/workoho/AzAuto-Common-Runbook-FW
 .RELEASENOTES
-    Version 1.4.1 (2024-06-06)
-    - Changed the way the script imports the required Microsoft Graph modules, which must only be imported AFTER the connection to Azure Graph API was established.
+    Version 1.4.2 (2024-06-15)
+    - Be more specific in error message when referring user has not signed in within the specified time frame.
 #>
 
 <#
@@ -1330,15 +1330,15 @@ Function ProcessReferralUser ($ReferralUserId, $LocalUserId, $Tier, $UserPhotoUr
             )
         ) {
             [void] $script:returnError.Add(( ./Common_0000__Write-Error.ps1 @{
-                        Message           = "${ReferralUserId}: Referral User ID must be in active use within the last $InternalReferenceAccountLastSignInMinDaysBefore days."
+                        Message           = "${ReferralUserId}: Referral User ID must be in active use within the last $InternalReferenceAccountLastSignInMinDaysBefore days. $(if ($refUserObjSignInActivity.LastSuccessfulSignInDateTime) { 'Last successful sign-in: ' + $refUserObjSignInActivity.LastSuccessfulSignInDateTime.ToString('s') + ' Universal Time.' } else { 'No sign-in activity found.' })"
                         ErrorId           = '403'
                         Category          = 'PermissionDenied'
                         TargetName        = $refUserObj.UserPrincipalName
                         TargetObject      = $refUserObj.Id
                         TargetType        = 'UserId'
-                        RecommendedAction = "Make sure the user as logged in within the last $InternalReferenceAccountLastSignInMinDaysBefore days at least once."
+                        RecommendedAction = "Make sure the user has logged in within the last $InternalReferenceAccountLastSignInMinDaysBefore days at least once."
                         CategoryActivity  = 'ReferralUserId internal user validation'
-                        CategoryReason    = "Referral User ID must be in active use within the last $InternalReferenceAccountLastSignInMinDaysBefore days."
+                        CategoryReason    = "Referral User ID must be in active use within the last $InternalReferenceAccountLastSignInMinDaysBefore days. $(if ($refUserObjSignInActivity.LastSuccessfulSignInDateTime) { 'Last successful sign-in: ' + $refUserObjSignInActivity.LastSuccessfulSignInDateTime.ToString('s') + ' Universal Time.' } else { 'No sign-in activity found.' })"
                     }))
             return
         }
@@ -1547,15 +1547,15 @@ Function ProcessReferralUser ($ReferralUserId, $LocalUserId, $Tier, $UserPhotoUr
             )
         ) {
             [void] $script:returnError.Add(( ./Common_0000__Write-Error.ps1 @{
-                        Message           = "${ReferralUserId}: Referral User ID must be in active use within the last $ExternalReferenceAccountLastSignInMinDaysBefore days."
+                        Message           = "${ReferralUserId}: Referral User ID must be in active use within the last $InternalReferenceAccountLastSignInMinDaysBefore days. $(if ($refUserObjSignInActivity.LastSuccessfulSignInDateTime) { 'Last successful sign-in: ' + $refUserObjSignInActivity.LastSuccessfulSignInDateTime.ToString('s') + ' Universal Time.' } else { 'No sign-in activity found.' })"
                         ErrorId           = '403'
                         Category          = 'PermissionDenied'
                         TargetName        = $refUserObj.UserPrincipalName
                         TargetObject      = $refUserObj.Id
                         TargetType        = 'UserId'
-                        RecommendedAction = "Make sure the external user as logged in to the resource tenant within the last $ExternalReferenceAccountLastSignInMinDaysBefore days at least once."
+                        RecommendedAction = "Make sure the external user has logged in to the resource tenant within the last $ExternalReferenceAccountLastSignInMinDaysBefore days at least once."
                         CategoryActivity  = 'ReferralUserId external user validation'
-                        CategoryReason    = "Referral User ID must be in active use within the last $ExternalReferenceAccountLastSignInMinDaysBefore days."
+                        CategoryReason    = "Referral User ID must be in active use within the last $InternalReferenceAccountLastSignInMinDaysBefore days. $(if ($refUserObjSignInActivity.LastSuccessfulSignInDateTime) { 'Last successful sign-in: ' + $refUserObjSignInActivity.LastSuccessfulSignInDateTime.ToString('s') + ' Universal Time.' } else { 'No sign-in activity found.' })"
                     }))
             return
         }
