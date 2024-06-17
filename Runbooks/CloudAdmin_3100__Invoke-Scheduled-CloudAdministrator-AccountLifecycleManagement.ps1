@@ -1,5 +1,5 @@
 <#PSScriptInfo
-.VERSION 1.0.0
+.VERSION 1.1.0
 .GUID ae957fef-f6c2-458d-bf37-27211dfd2640
 .AUTHOR Julian Pawlowski
 .COMPANYNAME Workoho GmbH
@@ -12,8 +12,8 @@
 .REQUIREDSCRIPTS CloudAdmin_0000__Common_0000__Get-ConfigurationConstants.ps1,CloudAdmin_0000__Common_0001__Get-CloudAdminAccountsByPrimaryAccount.ps1
 .EXTERNALSCRIPTDEPENDENCIES https://github.com/workoho/AzAuto-Common-Runbook-FW
 .RELEASENOTES
-    Version 1.0.0 (2024-06-03)
-    - Initial release.
+    Version 1.1.0 (2024-06-17)
+    - Minor bug fixes and improvements.
 #>
 
 <#
@@ -295,7 +295,7 @@ $return = @{
                 Write-Verbose "[SyncAdminAccountStatus]: - Account has no existing referral account. Attempting to soft-delete account."
                 $params = @{
                     Method      = 'DELETE'
-                    Uri         = "https://graph.microsoft.com/v1.0/users/$($_.Id)"
+                    Uri         = "/v1.0/users/$($_.Id)"
                     ErrorAction = 'Stop'
                     Verbose     = $false
                     Debug       = $false
@@ -381,7 +381,7 @@ $return = @{
             Write-Verbose "[SyncAdminAccountStatus]: - Account should be restoreed to match referral account status. Attempting to restore account."
             $params = @{
                 Method      = 'POST'
-                Uri         = "https://graph.microsoft.com/v1.0/directory/deletedItems/microsoft.graph.user/$($_.Id)/restore"
+                Uri         = "/v1.0/directory/deletedItems/microsoft.graph.user/$($_.Id)/restore"
                 ErrorAction = 'Stop'
                 Verbose     = $false
                 Debug       = $false
@@ -430,11 +430,10 @@ $return = @{
 
                 $params = @{
                     Method      = 'PATCH'
-                    Uri         = "https://graph.microsoft.com/v1.0/users/$($_.Id)"
+                    Uri         = "/v1.0/users/$($_.Id)"
                     Body        = @{
                         AccountEnabled = $false
                     }
-                    OutputType  = 'PSObject'
                     ErrorAction = 'Stop'
                     Verbose     = $false
                     Debug       = $false
@@ -485,11 +484,10 @@ $return = @{
 
                 $params = @{
                     Method      = 'PATCH'
-                    Uri         = "https://graph.microsoft.com/v1.0/users/$($_.Id)"
+                    Uri         = "/v1.0/users/$($_.Id)"
                     Body        = @{
                         AccountEnabled = $true
                     }
-                    OutputType  = 'PSObject'
                     ErrorAction = 'Stop'
                     Verbose     = $false
                     Debug       = $false

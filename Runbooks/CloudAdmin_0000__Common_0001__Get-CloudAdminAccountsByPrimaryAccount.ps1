@@ -1,5 +1,5 @@
 <#PSScriptInfo
-.VERSION 1.1.0
+.VERSION 1.2.0
 .GUID 04a626b1-2f12-4afa-a789-76e97898cf5b
 .AUTHOR Julian Pawlowski
 .COMPANYNAME Workoho GmbH
@@ -12,8 +12,8 @@
 .REQUIREDSCRIPTS CloudAdmin_0000__Common_0000__Get-ConfigurationConstants.ps1
 .EXTERNALSCRIPTDEPENDENCIES https://github.com/workoho/AzAuto-Common-Runbook-FW
 .RELEASENOTES
-    Version 1.0.0 (2024-06-06)
-    - use Common_0001__Invoke-MgGraphRequest.ps1 instead of Common_0002__Invoke-MgGraphRequest.ps1
+    Version 1.2.0 (2024-06-17)
+    - Minor bug fixes and improvements.
 #>
 
 <#
@@ -242,7 +242,7 @@ function Get-CloudAdminAccountsByTier {
 
     $params = @{
         Method      = 'POST'
-        Uri         = 'https://graph.microsoft.com/v1.0/$batch'
+        Uri         = '/v1.0/$batch'
         Body        = @{
             requests = [System.Collections.ArrayList] @(
 
@@ -278,7 +278,6 @@ function Get-CloudAdminAccountsByTier {
                 }
             )
         }
-        OutputType  = 'PSObject'
         ErrorAction = 'Stop'
         Verbose     = $false
         Debug       = $false
@@ -525,7 +524,7 @@ $TierPrefix = @(
 )
 
 try {
-    $VerifiedDomains = (./Common_0001__Invoke-MgGraphRequest.ps1 @{ Method = 'GET'; Uri = 'https://graph.microsoft.com/v1.0/organization'; OutputType = 'PSObject'; ErrorAction = 'Stop'; Verbose = $false; Debug = $false }).Value.VerifiedDomains
+    $VerifiedDomains = (./Common_0001__Invoke-MgGraphRequest.ps1 @{ Uri = '/v1.0/organization'; ErrorAction = 'Stop'; Verbose = $false; Debug = $false }).Value.VerifiedDomains
 }
 catch {
     Throw $_

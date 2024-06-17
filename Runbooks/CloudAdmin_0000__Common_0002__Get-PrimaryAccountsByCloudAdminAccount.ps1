@@ -1,5 +1,5 @@
 <#PSScriptInfo
-.VERSION 1.0.0
+.VERSION 1.1.0
 .GUID 9be21e88-4210-47d9-a533-3beb443de48a
 .AUTHOR Julian Pawlowski
 .COMPANYNAME Workoho GmbH
@@ -9,11 +9,11 @@
 .PROJECTURI https://github.com/workoho/Entra-Tiering-Security-Model
 .ICONURI
 .EXTERNALMODULEDEPENDENCIES Microsoft.Graph.Authentication
-.REQUIREDSCRIPTS CloudAdmin_0000__Common_0000__Get-ConfigurationConstants.ps1
+.REQUIREDSCRIPTS CloudAdmin_0000__Common_0000__Get-ConfigurationConstants.ps1,CloudAdmin_0000__Common_0001__Get-CloudAdminAccountsByPrimaryAccount.ps1
 .EXTERNALSCRIPTDEPENDENCIES https://github.com/workoho/AzAuto-Common-Runbook-FW
 .RELEASENOTES
-    Version 1.0.0 (2024-05-29)
-    - Initial release.
+    Version 1.1.0 (2024-06-17)
+    - Update PSScriptInfo.
 #>
 
 <#
@@ -320,6 +320,7 @@ if ($CloudAdminUserId.Count -gt 0) {
                 Clear-Variable -Name userObj -ErrorAction SilentlyContinue
                 Clear-Variable -Name refUserObj -ErrorAction SilentlyContinue
                 [System.GC]::Collect()
+                [System.GC]::WaitForPendingFinalizers()
             }
         }
     }
