@@ -1,5 +1,5 @@
 <#PSScriptInfo
-.VERSION 1.2.0
+.VERSION 1.2.1
 .GUID 04a626b1-2f12-4afa-a789-76e97898cf5b
 .AUTHOR Julian Pawlowski
 .COMPANYNAME Workoho GmbH
@@ -12,8 +12,8 @@
 .REQUIREDSCRIPTS CloudAdmin_0000__Common_0000__Get-ConfigurationConstants.ps1
 .EXTERNALSCRIPTDEPENDENCIES https://github.com/workoho/AzAuto-Common-Runbook-FW
 .RELEASENOTES
-    Version 1.2.0 (2024-06-17)
-    - Minor bug fixes and improvements.
+    Version 1.2.1 (2024-06-18)
+    - add missing manager property onPremisesSamAccountName
 #>
 
 <#
@@ -407,6 +407,7 @@ function Get-CloudAdminAccountsByTier {
                                                     manager = @(
                                                         'displayName'
                                                         'userPrincipalName'
+                                                        'onPremisesSamAccountName'
                                                         'id'
                                                         'accountEnabled'
                                                         'mail'

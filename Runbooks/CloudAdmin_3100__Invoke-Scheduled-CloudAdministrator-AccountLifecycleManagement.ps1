@@ -1,5 +1,5 @@
 <#PSScriptInfo
-.VERSION 1.1.0
+.VERSION 1.1.1
 .GUID ae957fef-f6c2-458d-bf37-27211dfd2640
 .AUTHOR Julian Pawlowski
 .COMPANYNAME Workoho GmbH
@@ -12,8 +12,9 @@
 .REQUIREDSCRIPTS CloudAdmin_0000__Common_0000__Get-ConfigurationConstants.ps1,CloudAdmin_0000__Common_0001__Get-CloudAdminAccountsByPrimaryAccount.ps1
 .EXTERNALSCRIPTDEPENDENCIES https://github.com/workoho/AzAuto-Common-Runbook-FW
 .RELEASENOTES
-    Version 1.1.0 (2024-06-17)
-    - Minor bug fixes and improvements.
+    Version 1.1.1 (2024-06-18)
+    - Fixed handling of accounts with missing referral accounts.
+    - Fixed conflict between deletion and restore actions.
 #>
 
 <#
@@ -282,7 +283,10 @@ $return = @{
         Write-Verbose "[SyncAdminAccountStatus]: - Processing account: $($_.userPrincipalName) ($($_.Id)) with security tier level $($_.securityTierLevel)"
 
         #region Delete account
-        if ($null -eq $_.referralUserAccount) {
+        if (
+            $null -eq $_.referralUserAccount -or
+            [string]::IsNullOrEmpty($_.referralUserAccount.id)
+        ) {
             if ($null -ne $_.deletedDateTime) {
                 Write-Warning "$($_.userPrincipalName) ($($_.Id)): - Account has no existing referral account. Waiting for Microsoft Entra 30 days retention period to expire."
                 $_ | Add-Member -MemberType NoteProperty -Name "accountLifecycle" -Value @{
@@ -374,11 +378,11 @@ $return = @{
         #endregion
 
         #region Restore account
-        if ($null -eq $_.deletedDateTime) {
-            Write-Debug "[SyncAdminAccountStatus]: - Account does not need to be restoreed. Skipping."
+        elseif ($null -eq $_.deletedDateTime) {
+            Write-Debug "[SyncAdminAccountStatus]: - Account does not need to be restored. Skipping."
         }
         elseif ($LifecycleRestoreAfterDelete[$_.securityTierLevel] -eq $true) {
-            Write-Verbose "[SyncAdminAccountStatus]: - Account should be restoreed to match referral account status. Attempting to restore account."
+            Write-Verbose "[SyncAdminAccountStatus]: - Account should be restored to match referral account status. Attempting to restore account."
             $params = @{
                 Method      = 'POST'
                 Uri         = "/v1.0/directory/deletedItems/microsoft.graph.user/$($_.Id)/restore"
