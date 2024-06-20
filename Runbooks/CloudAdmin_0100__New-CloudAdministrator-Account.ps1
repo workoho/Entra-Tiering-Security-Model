@@ -2177,9 +2177,9 @@ Function ProcessReferralUser ($ReferralUserId, $LocalUserId, $Tier, $UserPhotoUr
     }
     else {
         #region License Availability Validation Before New Account Creation ------------
-        $TenantSubscriptions = (./Common_0001__Invoke-MgGraphRequest.ps1 @{ Uri = '/v1.0/subscribedSkus'; ErrorAction = 'Stop'; Verbose = $false; Debug = $false }).value | Where-Object { $_.SkuPartNumber -in $LicenseSkuPartNumbers } | Select-Object -Property Sku*, ConsumedUnits, ServicePlans -ExpandProperty PrepaidUnits | & {
+        $TenantSubscriptions = (./Common_0001__Invoke-MgGraphRequest.ps1 @{ Uri = '/v1.0/subscribedSkus'; ErrorAction = 'Stop'; Verbose = $false; Debug = $false }).value | Where-Object { $_.SkuPartNumber -in $LicenseSkuPartNumbers } | Select-Object -Property Sku*, ConsumedUnits, ServicePlans, PrepaidUnits | & {
             process {
-                if ($_.ConsumedUnits -ge $_.Enabled) {
+                if ($_.ConsumedUnits -ge $_.PrepaidUnits.Enabled) {
                     [void] $script:returnError.Add(( ./Common_0000__Write-Error.ps1 @{
                                 Message           = "${ReferralUserId}: License SkuPartNumber $($_.SkuPartNumber) has run out of free licenses."
                                 ErrorId           = '503'
@@ -2405,9 +2405,9 @@ Function ProcessReferralUser ($ReferralUserId, $LocalUserId, $Tier, $UserPhotoUr
 
     #region License Availability Validation For Pre-Existing Account ---------------
     if (-Not $TenantSubscriptions) {
-        $TenantSubscriptions = (./Common_0001__Invoke-MgGraphRequest.ps1 @{ Uri = '/v1.0/subscribedSkus'; ErrorAction = 'Stop'; Verbose = $false; Debug = $false }).value | Where-Object { $_.SkuPartNumber -in $LicenseSkuPartNumbers } | Select-Object -Property Sku*, ConsumedUnits, ServicePlans -ExpandProperty PrepaidUnits | & {
+        $TenantSubscriptions = (./Common_0001__Invoke-MgGraphRequest.ps1 @{ Uri = '/v1.0/subscribedSkus'; ErrorAction = 'Stop'; Verbose = $false; Debug = $false }).value | Where-Object { $_.SkuPartNumber -in $LicenseSkuPartNumbers } | Select-Object -Property Sku*, ConsumedUnits, ServicePlans, PrepaidUnits | & {
             process {
-                if ($_.ConsumedUnits -ge $_.Enabled) {
+                if ($_.ConsumedUnits -ge $_.PrepaidUnits.Enabled) {
                     [void] $script:returnError.Add(( ./Common_0000__Write-Error.ps1 @{
                                 Message           = "${ReferralUserId}: License SkuPartNumber $($_.SkuPartNumber) has run out of free licenses."
                                 ErrorId           = '503'
@@ -2657,7 +2657,7 @@ Function ProcessReferralUser ($ReferralUserId, $LocalUserId, $Tier, $UserPhotoUr
     }
     else {
         $params.ForwardingSmtpAddress = $refUserObj.mail
-        Write-Warning "[$($UserObj.userPrincipalName)]: - External e-mail forwarding to $($params.ForwardingSmtpAddress)"
+        Write-Warning "$($UserObj.userPrincipalName): External e-mail forwarding to $($params.ForwardingSmtpAddress)"
     }
 
     try {
