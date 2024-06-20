@@ -1,5 +1,5 @@
 <#PSScriptInfo
-.VERSION 1.2.1
+.VERSION 1.3.0
 .GUID 04a626b1-2f12-4afa-a789-76e97898cf5b
 .AUTHOR Julian Pawlowski
 .COMPANYNAME Workoho GmbH
@@ -12,8 +12,8 @@
 .REQUIREDSCRIPTS CloudAdmin_0000__Common_0000__Get-ConfigurationConstants.ps1
 .EXTERNALSCRIPTDEPENDENCIES https://github.com/workoho/AzAuto-Common-Runbook-FW
 .RELEASENOTES
-    Version 1.2.1 (2024-06-18)
-    - add missing manager property onPremisesSamAccountName
+    Version 1.3.0 (2024-06-20)
+    - Add metadata to CSV output.
 #>
 
 <#
@@ -821,27 +821,30 @@ if ($OutCsv) {
                     'managerMail'
                 )
             }
-        } | & {
-            process {
-                foreach ($property in $_.PSObject.Properties) {
-                    if ($property.Value -is [DateTime]) {
-                        $property.Value = [DateTime]::Parse($property.Value).ToUniversalTime().ToString('yyyy-MM-ddTHH:mm:ssZ')
-                    }
-                    elseif ($property.Value -is [bool]) {
-                        $property.Value = if ($property.Value) { '1' } else { '0' }
-                    }
-                    elseif ($property.Value -is [array]) {
-                        $property.Value = $property.Value -join ', '
-                    }
-                }
-                $_
-            }
         }
     ) -StorageUri $(
         if (-not [string]::IsNullOrEmpty($StorageUri)) {
             $baseUri = ($uri = [System.Uri]$StorageUri).GetLeftPart([System.UriPartial]::Path)
             $baseUri + '/' + [DateTime]::UtcNow.ToString('yyyyMMddTHHmmssfffZ') + '_Get-CloudAdminAccountsByPrimaryAccount.csv' + $uri.Query
         }
+    ) -Metadata $(
+        $JobInfo = ./Common_0002__Get-AzAutomationJobInfo.ps1 -StartedBy $true
+        $Metadata = [ordered] @{
+            RunbookName          = $JobInfo.Runbook.Name
+            RunbookScriptVersion = $JobInfo.Runbook.Version
+            RunbookScriptGuid    = $JobInfo.Runbook.Guid
+            CreatedAt            = $JobInfo.StartTime
+            CreatedBy            = if ($JobInfo.StartedBy.userPrincipalName) { $JobInfo.StartedBy.userPrincipalName } elseif ($JobInfo.StartedBy.displayName) { $JobInfo.StartedBy.displayName }
+        }
+        $commonParameters = 'OutCsv', 'Verbose', 'Debug', 'ErrorAction', 'WarningAction', 'InformationAction', 'ErrorVariable', 'WarningVariable', 'InformationVariable', 'OutVariable', 'OutBuffer', 'PipelineVariable'
+        $PSBoundParameters.Keys | Sort-Object | ForEach-Object {
+            if ($_ -in $commonParameters) { return }
+            $Metadata["ExportParameter_$_"] = $PSBoundParameters[$_]
+        }
+        if (($Metadata.Keys | Where-Object { $_ -like 'ExportParameter_*' }).Count -eq 0) {
+            $Metadata['ExportParameters'] = 'None'
+        }
+        $Metadata
     )
     return
 }
