@@ -646,23 +646,22 @@ if ($OutCsv) {
             $baseUri + '/' + [DateTime]::UtcNow.ToString('yyyyMMddTHHmmssfffZ') + '_Invoke-Scheduled-CloudAdministrator-AccountLifecycleManagement.csv' + $uri.Query
         }
     ) -Metadata $(
-        $JobInfo = ./Common_0002__Get-AzAutomationJobInfo.ps1 -StartedBy $true
+        $JobInfo = ./Common_0002__Get-AzAutomationJobInfo.ps1
         $Metadata = [ordered] @{
             RunbookName          = $JobInfo.Runbook.Name
-            RunbookScriptVersion = $JobInfo.Runbook.Version
-            RunbookScriptGuid    = $JobInfo.Runbook.Guid
+            RunbookScriptVersion = $JobInfo.Runbook.ScriptVersion
+            RunbookScriptGuid    = $JobInfo.Runbook.ScriptGuid
             CreatedAt            = $JobInfo.StartTime
-            CreatedBy            = if ($JobInfo.StartedBy.userPrincipalName) { $JobInfo.StartedBy.userPrincipalName } elseif ($JobInfo.StartedBy.displayName) { $JobInfo.StartedBy.displayName }
         }
         $commonParameters = 'OutCsv', 'Verbose', 'Debug', 'ErrorAction', 'WarningAction', 'InformationAction', 'ErrorVariable', 'WarningVariable', 'InformationVariable', 'OutVariable', 'OutBuffer', 'PipelineVariable'
         $PSBoundParameters.Keys | Sort-Object | ForEach-Object {
             if ($_ -in $commonParameters) { return }
             $Metadata["ExportParameter_$_"] = $PSBoundParameters[$_]
         }
-        if (($Metadata.Keys | Where-Object { $_ -like 'ExportParameter_*' }).Count -eq 0) {
+        if (-not ($Metadata.Keys -like 'ExportParameter_*')) {
             $Metadata['ExportParameters'] = 'None'
         }
-        $Metadata
+        [pscustomobject] $Metadata
     )
     return
 }
