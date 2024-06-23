@@ -171,12 +171,8 @@ if ($CloudAdminUserId.Count -gt 0) {
     @($CloudAdminUserId) | & {
         process {
             try {
-                if ($_ -is [PSCustomObject]) {
-                    $userObj = $_
-                    Write-Verbose "[$i]: - Processing userId '$($_.Id)'."
-                }
-                else {
-                    Write-Verbose "[$i]: - Processing userId '$_'."
+                if ($_ -is [string]) {
+                    Write-Verbose "[$i]: - Processing string userId '$_'."
 
                     try {
                         $userObj = @(
@@ -217,6 +213,10 @@ if ($CloudAdminUserId.Count -gt 0) {
                         Write-Error "userId '$_' not found."
                         return
                     }
+                }
+                else {
+                    $userObj = $_
+                    Write-Verbose "[$i]: - Processing object userId '$($_.Id)'."
                 }
 
                 if (
@@ -354,7 +354,7 @@ if ($CloudAdminUserId.Count -gt 0) {
                     [void] $return.Add($refUserObj)
                 }
                 else {
-                    $existingRefUserObj.cloudAdminAccounts.Add($userObj)
+                    [void] $existingRefUserObj.cloudAdminAccounts.Add($userObj)
                 }
             }
             finally {
