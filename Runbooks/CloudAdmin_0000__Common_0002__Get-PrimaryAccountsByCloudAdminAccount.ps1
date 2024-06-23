@@ -1,5 +1,5 @@
 <#PSScriptInfo
-.VERSION 1.2.0
+.VERSION 1.3.0
 .GUID 9be21e88-4210-47d9-a533-3beb443de48a
 .AUTHOR Julian Pawlowski
 .COMPANYNAME Workoho GmbH
@@ -12,8 +12,8 @@
 .REQUIREDSCRIPTS CloudAdmin_0000__Common_0000__Get-ConfigurationConstants.ps1,CloudAdmin_0000__Common_0001__Get-CloudAdminAccountsByPrimaryAccount.ps1
 .EXTERNALSCRIPTDEPENDENCIES https://github.com/workoho/AzAuto-Common-Runbook-FW
 .RELEASENOTES
-    Version 1.2.0 (2024-06-20)
-    - Add metadata to CSV output.
+    Version 1.3.0 (2024-06-23)
+    - Fixed CSV output when using hashtables.
 #>
 
 <#
@@ -191,7 +191,23 @@ if ($CloudAdminUserId.Count -gt 0) {
                                 'signInActivity'
                                 'onPremisesExtensionAttributes'
                             )
-                        )[0]
+                        )[0] | & {
+                            process {
+                                # Return as ordered hashtable to maintain the order of properties
+                                [ordered] @{
+                                    securityTierLevel             = $null
+                                    displayName                   = $_.displayName
+                                    userPrincipalName             = $_.userPrincipalName
+                                    id                            = $_.id
+                                    accountEnabled                = $_.accountEnabled
+                                    createdDateTime               = $_.createdDateTime
+                                    deletedDateTime               = $_.deletedDateTime
+                                    mail                          = $_.mail
+                                    signInActivity                = $_.signInActivity
+                                    onPremisesExtensionAttributes = $_.onPremisesExtensionAttributes
+                                }
+                            }
+                        }
                     }
                     catch {
                         Throw $_
@@ -247,7 +263,7 @@ if ($CloudAdminUserId.Count -gt 0) {
                 }
 
                 if ($null -eq $userObj.securityTierLevel) {
-                    $userObj | Add-Member -MemberType NoteProperty -Name 'securityTierLevel' -Value $securityTierLevel
+                    $userObj.securityTierLevel = $securityTierLevel
                 }
 
                 try {
@@ -282,7 +298,38 @@ if ($CloudAdminUserId.Count -gt 0) {
                                 )
                             }
                         )
-                    )[0]
+                    )[0] | & {
+                        process {
+                            # Return as ordered hashtable to maintain the order of properties
+                            [ordered] @{
+                                displayName                   = $_.displayName
+                                userPrincipalName             = $_.userPrincipalName
+                                onPremisesSamAccountName      = $_.onPremisesSamAccountName
+                                id                            = $_.id
+                                accountEnabled                = $_.accountEnabled
+                                createdDateTime               = $_.createdDateTime
+                                deletedDateTime               = $_.deletedDateTime
+                                mail                          = $_.mail
+                                companyName                   = $_.companyName
+                                department                    = $_.department
+                                streetAddress                 = $_.streetAddress
+                                city                          = $_.city
+                                postalCode                    = $_.postalCode
+                                state                         = $_.state
+                                country                       = $_.country
+                                signInActivity                = $_.signInActivity
+                                onPremisesExtensionAttributes = $_.onPremisesExtensionAttributes
+                                manager                       = [ordered] @{
+                                    displayName              = $_.manager.displayName
+                                    userPrincipalName        = $_.manager.userPrincipalName
+                                    onPremisesSamAccountName = $_.manager.onPremisesSamAccountName
+                                    id                       = $_.manager.id
+                                    accountEnabled           = $_.manager.accountEnabled
+                                    mail                     = $_.manager.mail
+                                }
+                            }
+                        }
+                    }
                 }
                 catch {
                     Throw $_
@@ -294,19 +341,15 @@ if ($CloudAdminUserId.Count -gt 0) {
                 }
 
                 if ($null -eq $userObj.referralUserAccount) {
-                    $userObj | Add-Member -MemberType NoteProperty -Name 'referralUserAccount' -Value (
-                        [PSCustomObject] @{
-                            id = $refUserObj.id
-                        }
-                    )
+                    $userObj.referralUserAccount = @{
+                        id = $refUserObj.id
+                    }
                 }
 
                 $existingRefUserObj = $return | Where-Object { $_.Id -eq $refUserObj.Id }
                 if ($null -eq $existingRefUserObj) {
-                    $refUserObj | Add-Member -MemberType NoteProperty -Name 'cloudAdminAccounts' -Value (
-                        [System.Collections.ArrayList] @(
-                            $userObj
-                        )
+                    $refUserObj.cloudAdminAccounts = [System.Collections.ArrayList] @(
+                        $userObj
                     )
                     [void] $return.Add($refUserObj)
                 }
@@ -339,28 +382,36 @@ if ($OutCsv) {
         return 'No referenced primary user accounts found.'
     }
 
-    $properties = @{
+    $properties = [ordered] @{
         'lastSignInDateTime'               = 'signInActivity.lastSignInDateTime'
         'lastNonInteractiveSignInDateTime' = 'signInActivity.lastNonInteractiveSignInDateTime'
         'lastSuccessfulSignInDateTime'     = 'signInActivity.lastSuccessfulSignInDateTime'
-        'extensionAttribute1'              = 'onPremisesExtensionAttributes.extensionAttribute1'
-        'extensionAttribute2'              = 'onPremisesExtensionAttributes.extensionAttribute2'
-        'extensionAttribute3'              = 'onPremisesExtensionAttributes.extensionAttribute3'
-        'extensionAttribute4'              = 'onPremisesExtensionAttributes.extensionAttribute4'
-        'extensionAttribute5'              = 'onPremisesExtensionAttributes.extensionAttribute5'
-        'extensionAttribute6'              = 'onPremisesExtensionAttributes.extensionAttribute6'
-        'extensionAttribute7'              = 'onPremisesExtensionAttributes.extensionAttribute7'
-        'extensionAttribute8'              = 'onPremisesExtensionAttributes.extensionAttribute8'
-        'extensionAttribute9'              = 'onPremisesExtensionAttributes.extensionAttribute9'
-        'extensionAttribute10'             = 'onPremisesExtensionAttributes.extensionAttribute10'
-        'extensionAttribute11'             = 'onPremisesExtensionAttributes.extensionAttribute11'
-        'extensionAttribute12'             = 'onPremisesExtensionAttributes.extensionAttribute12'
-        'extensionAttribute13'             = 'onPremisesExtensionAttributes.extensionAttribute13'
-        'extensionAttribute14'             = 'onPremisesExtensionAttributes.extensionAttribute14'
-        'extensionAttribute15'             = 'onPremisesExtensionAttributes.extensionAttribute15'
+
+        'onPremExtensionAttribute1'        = 'onPremisesExtensionAttributes.extensionAttribute1'
+        'onPremExtensionAttribute2'        = 'onPremisesExtensionAttributes.extensionAttribute2'
+        'onPremExtensionAttribute3'        = 'onPremisesExtensionAttributes.extensionAttribute3'
+        'onPremExtensionAttribute4'        = 'onPremisesExtensionAttributes.extensionAttribute4'
+        'onPremExtensionAttribute5'        = 'onPremisesExtensionAttributes.extensionAttribute5'
+        'onPremExtensionAttribute6'        = 'onPremisesExtensionAttributes.extensionAttribute6'
+        'onPremExtensionAttribute7'        = 'onPremisesExtensionAttributes.extensionAttribute7'
+        'onPremExtensionAttribute8'        = 'onPremisesExtensionAttributes.extensionAttribute8'
+        'onPremExtensionAttribute9'        = 'onPremisesExtensionAttributes.extensionAttribute9'
+        'onPremExtensionAttribute10'       = 'onPremisesExtensionAttributes.extensionAttribute10'
+        'onPremExtensionAttribute11'       = 'onPremisesExtensionAttributes.extensionAttribute11'
+        'onPremExtensionAttribute12'       = 'onPremisesExtensionAttributes.extensionAttribute12'
+        'onPremExtensionAttribute13'       = 'onPremisesExtensionAttributes.extensionAttribute13'
+        'onPremExtensionAttribute14'       = 'onPremisesExtensionAttributes.extensionAttribute14'
+        'onPremExtensionAttribute15'       = 'onPremisesExtensionAttributes.extensionAttribute15'
+
+        'managerDisplayName'               = 'manager.displayName'
+        'managerUserPrincipalName'         = 'manager.userPrincipalName'
+        'managerOnPremisesSamAccountName'  = 'manager.onPremisesSamAccountName'
+        'managerId'                        = 'manager.id'
+        'managerAccountEnabled'            = 'manager.accountEnabled'
+        'managerMail'                      = 'manager.mail'
     }
 
-    $cloudAdminAccountProperties = @{
+    $cloudAdminAccountProperties = [ordered] @{
         'displayName'                      = 'displayName'
         'userPrincipalName'                = 'userPrincipalName'
         'id'                               = 'id'
@@ -371,33 +422,35 @@ if ($OutCsv) {
         'lastSignInDateTime'               = 'signInActivity.lastSignInDateTime'
         'lastNonInteractiveSignInDateTime' = 'signInActivity.lastNonInteractiveSignInDateTime'
         'lastSuccessfulSignInDateTime'     = 'signInActivity.lastSuccessfulSignInDateTime'
-        'extensionAttribute1'              = 'onPremisesExtensionAttributes.extensionAttribute1'
-        'extensionAttribute2'              = 'onPremisesExtensionAttributes.extensionAttribute2'
-        'extensionAttribute3'              = 'onPremisesExtensionAttributes.extensionAttribute3'
-        'extensionAttribute4'              = 'onPremisesExtensionAttributes.extensionAttribute4'
-        'extensionAttribute5'              = 'onPremisesExtensionAttributes.extensionAttribute5'
-        'extensionAttribute6'              = 'onPremisesExtensionAttributes.extensionAttribute6'
-        'extensionAttribute7'              = 'onPremisesExtensionAttributes.extensionAttribute7'
-        'extensionAttribute8'              = 'onPremisesExtensionAttributes.extensionAttribute8'
-        'extensionAttribute9'              = 'onPremisesExtensionAttributes.extensionAttribute9'
-        'extensionAttribute10'             = 'onPremisesExtensionAttributes.extensionAttribute10'
-        'extensionAttribute11'             = 'onPremisesExtensionAttributes.extensionAttribute11'
-        'extensionAttribute12'             = 'onPremisesExtensionAttributes.extensionAttribute12'
-        'extensionAttribute13'             = 'onPremisesExtensionAttributes.extensionAttribute13'
-        'extensionAttribute14'             = 'onPremisesExtensionAttributes.extensionAttribute14'
-        'extensionAttribute15'             = 'onPremisesExtensionAttributes.extensionAttribute15'
+        'onPremExtensionAttribute1'        = 'onPremisesExtensionAttributes.extensionAttribute1'
+        'onPremExtensionAttribute2'        = 'onPremisesExtensionAttributes.extensionAttribute2'
+        'onPremExtensionAttribute3'        = 'onPremisesExtensionAttributes.extensionAttribute3'
+        'onPremExtensionAttribute4'        = 'onPremisesExtensionAttributes.extensionAttribute4'
+        'onPremExtensionAttribute5'        = 'onPremisesExtensionAttributes.extensionAttribute5'
+        'onPremExtensionAttribute6'        = 'onPremisesExtensionAttributes.extensionAttribute6'
+        'onPremExtensionAttribute7'        = 'onPremisesExtensionAttributes.extensionAttribute7'
+        'onPremExtensionAttribute8'        = 'onPremisesExtensionAttributes.extensionAttribute8'
+        'onPremExtensionAttribute9'        = 'onPremisesExtensionAttributes.extensionAttribute9'
+        'onPremExtensionAttribute10'       = 'onPremisesExtensionAttributes.extensionAttribute10'
+        'onPremExtensionAttribute11'       = 'onPremisesExtensionAttributes.extensionAttribute11'
+        'onPremExtensionAttribute12'       = 'onPremisesExtensionAttributes.extensionAttribute12'
+        'onPremExtensionAttribute13'       = 'onPremisesExtensionAttributes.extensionAttribute13'
+        'onPremExtensionAttribute14'       = 'onPremisesExtensionAttributes.extensionAttribute14'
+        'onPremExtensionAttribute15'       = 'onPremisesExtensionAttributes.extensionAttribute15'
     }
 
     ./Common_0000__Write-CsvOutput.ps1 -InputObject (
         $return | & {
             process {
+
+                # Flatten the nested properties
                 foreach ($property in $properties.GetEnumerator()) {
                     $nestedPropertyPath = $property.Value -split '\.'
                     if ($nestedPropertyPath.count -eq 3) {
-                        $_ | Add-Member -NotePropertyName $property.Key -NotePropertyValue $_.$($nestedPropertyPath[0]).$($nestedPropertyPath[1]).$($nestedPropertyPath[2])
+                        $_.$($property.Key) = $_.$($nestedPropertyPath[0]).$($nestedPropertyPath[1]).$($nestedPropertyPath[2])
                     }
                     elseif ($nestedPropertyPath.count -eq 2) {
-                        $_ | Add-Member -NotePropertyName $property.Key -NotePropertyValue $_.$($nestedPropertyPath[0]).$($nestedPropertyPath[1])
+                        $_.$($property.Key) = $_.$($nestedPropertyPath[0]).$($nestedPropertyPath[1])
                     }
                     else {
                         Throw "Invalid nested property path: $($property.Value)"
@@ -405,139 +458,47 @@ if ($OutCsv) {
                 }
 
                 if ($_.cloudAdminAccounts.Count -gt 0) {
-                    foreach ($cloudAdminAccount in $_.cloudAdminAccounts | Sort-Object -Property securityTierLevel) {
-                        foreach ($property in $cloudAdminAccountProperties.GetEnumerator()) {
-                            $propertyName = "T$($cloudAdminAccount.securityTierLevel)$($property.Key)"
-                            $nestedPropertyPath = $property.Value -split '\.'
-                            if ($nestedPropertyPath.count -eq 3) {
-                                $_ | Add-Member -NotePropertyName $propertyName -NotePropertyValue $cloudAdminAccount.$($nestedPropertyPath[0]).$($nestedPropertyPath[1]).$($nestedPropertyPath[2])
+                    for ($t = 0; $t -lt 3; $t++) {
+
+                        # If a cloud admin account exists for the current security tier level, flatten the nested properties
+                        $ref = $_
+                        $_.cloudAdminAccounts | Where-Object { $_.securityTierLevel -eq $t } | & {
+                            process {
+                                foreach ($property in $cloudAdminAccountProperties.GetEnumerator()) {
+                                    $propertyName = "T$($t)$($property.Key)"
+                                    $nestedPropertyPath = $property.Value -split '\.'
+                                    if ($nestedPropertyPath.count -eq 3) {
+                                        $ref.$propertyName = $_.$($nestedPropertyPath[0]).$($nestedPropertyPath[1]).$($nestedPropertyPath[2])
+                                    }
+                                    elseif ($nestedPropertyPath.count -eq 2) {
+                                        $ref.$propertyName = $_.$($nestedPropertyPath[0]).$($nestedPropertyPath[1])
+                                    }
+                                    elseif ($nestedPropertyPath.count -eq 1) {
+                                        $ref.$propertyName = $_.$($nestedPropertyPath[0])
+                                    }
+                                    else {
+                                        Throw "Invalid nested property path: $($property.Value)"
+                                    }
+                                }
                             }
-                            elseif ($nestedPropertyPath.count -eq 2) {
-                                $_ | Add-Member -NotePropertyName $propertyName -NotePropertyValue $cloudAdminAccount.$($nestedPropertyPath[0]).$($nestedPropertyPath[1])
-                            }
-                            elseif ($nestedPropertyPath.count -eq 1) {
-                                $_ | Add-Member -NotePropertyName $propertyName -NotePropertyValue $cloudAdminAccount.$($nestedPropertyPath[0])
-                            }
-                            else {
-                                Throw "Invalid nested property path: $($property.Value)"
+                        }
+
+                        # If no cloud admin account exists for the current security tier level, set all properties to $null
+                        if ($null -eq $_."T${t}id") {
+                            foreach ($property in $cloudAdminAccountProperties.GetEnumerator()) {
+                                $_."T$($t)$($property.Key)" = $null
                             }
                         }
                     }
                 }
 
-                $_ | Select-Object -Property @(
-                    'displayName'
-                    'userPrincipalName'
-                    'onPremisesSamAccountName'
-                    'id'
-                    'accountEnabled'
-                    'createdDateTime'
-                    'deletedDateTime'
-                    'mail'
-                    'companyName'
-                    'department'
-                    'streetAddress'
-                    'city'
-                    'postalCode'
-                    'state'
-                    'country'
-                    'lastSignInDateTime'
-                    'lastNonInteractiveSignInDateTime'
-                    'lastSuccessfulSignInDateTime'
-                    'extensionAttribute1'
-                    'extensionAttribute2'
-                    'extensionAttribute3'
-                    'extensionAttribute4'
-                    'extensionAttribute5'
-                    'extensionAttribute6'
-                    'extensionAttribute7'
-                    'extensionAttribute8'
-                    'extensionAttribute9'
-                    'extensionAttribute10'
-                    'extensionAttribute11'
-                    'extensionAttribute12'
-                    'extensionAttribute13'
-                    'extensionAttribute14'
-                    'extensionAttribute15'
+                $_.Remove('signInActivity')
+                $_.Remove('onPremisesExtensionAttributes')
+                $_.Remove('manager')
+                $_.Remove('cloudAdminAccounts')
 
-                    'T0displayName'
-                    'T0userPrincipalName'
-                    'T0id'
-                    'T0accountEnabled'
-                    'T0createdDateTime'
-                    'T0deletedDateTime'
-                    'T0mail'
-                    'T0lastSignInDateTime'
-                    'T0lastNonInteractiveSignInDateTime'
-                    'T0lastSuccessfulSignInDateTime'
-                    'T0extensionAttribute1'
-                    'T0extensionAttribute2'
-                    'T0extensionAttribute3'
-                    'T0extensionAttribute4'
-                    'T0extensionAttribute5'
-                    'T0extensionAttribute6'
-                    'T0extensionAttribute7'
-                    'T0extensionAttribute8'
-                    'T0extensionAttribute9'
-                    'T0extensionAttribute10'
-                    'T0extensionAttribute11'
-                    'T0extensionAttribute12'
-                    'T0extensionAttribute13'
-                    'T0extensionAttribute14'
-                    'T0extensionAttribute15'
-
-                    'T1displayName'
-                    'T1userPrincipalName'
-                    'T1id'
-                    'T1accountEnabled'
-                    'T1createdDateTime'
-                    'T1deletedDateTime'
-                    'T1mail'
-                    'T1lastSignInDateTime'
-                    'T1lastNonInteractiveSignInDateTime'
-                    'T1lastSuccessfulSignInDateTime'
-                    'T1extensionAttribute1'
-                    'T1extensionAttribute2'
-                    'T1extensionAttribute3'
-                    'T1extensionAttribute4'
-                    'T1extensionAttribute5'
-                    'T1extensionAttribute6'
-                    'T1extensionAttribute7'
-                    'T1extensionAttribute8'
-                    'T1extensionAttribute9'
-                    'T1extensionAttribute10'
-                    'T1extensionAttribute11'
-                    'T1extensionAttribute12'
-                    'T1extensionAttribute13'
-                    'T1extensionAttribute14'
-                    'T1extensionAttribute15'
-
-                    'T2displayName'
-                    'T2userPrincipalName'
-                    'T2id'
-                    'T2accountEnabled'
-                    'T2createdDateTime'
-                    'T2deletedDateTime'
-                    'T2mail'
-                    'T2lastSignInDateTime'
-                    'T2lastNonInteractiveSignInDateTime'
-                    'T2lastSuccessfulSignInDateTime'
-                    'T2extensionAttribute1'
-                    'T2extensionAttribute2'
-                    'T2extensionAttribute3'
-                    'T2extensionAttribute4'
-                    'T2extensionAttribute5'
-                    'T2extensionAttribute6'
-                    'T2extensionAttribute7'
-                    'T2extensionAttribute8'
-                    'T2extensionAttribute9'
-                    'T2extensionAttribute10'
-                    'T2extensionAttribute11'
-                    'T2extensionAttribute12'
-                    'T2extensionAttribute13'
-                    'T2extensionAttribute14'
-                    'T2extensionAttribute15'
-                )
+                # Return the hashtable to the pipeline
+                $_
             }
         }
     ) -StorageUri $(

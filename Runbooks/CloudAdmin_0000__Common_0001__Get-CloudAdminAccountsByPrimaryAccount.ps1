@@ -1,5 +1,5 @@
 <#PSScriptInfo
-.VERSION 1.3.0
+.VERSION 1.4.0
 .GUID 04a626b1-2f12-4afa-a789-76e97898cf5b
 .AUTHOR Julian Pawlowski
 .COMPANYNAME Workoho GmbH
@@ -12,8 +12,8 @@
 .REQUIREDSCRIPTS CloudAdmin_0000__Common_0000__Get-ConfigurationConstants.ps1
 .EXTERNALSCRIPTDEPENDENCIES https://github.com/workoho/AzAuto-Common-Runbook-FW
 .RELEASENOTES
-    Version 1.3.0 (2024-06-20)
-    - Add metadata to CSV output.
+    Version 1.4.0 (2024-06-23)
+    - Fixed CSV output when using hashtables.
 #>
 
 <#
@@ -372,64 +372,118 @@ function Get-CloudAdminAccountsByTier {
                                 }
                             }
 
-                            $_ | Add-Member -NotePropertyMembers @{
-                                securityTierLevel = $Tier
-                            }
-
-                            if (
-                                $ExpandReferralUserId -and
-                                -Not [string]::IsNullOrEmpty($_.onPremisesExtensionAttributes."extensionAttribute$ReferralUserIdExtensionAttribute") -and
-                                $_.onPremisesExtensionAttributes."extensionAttribute$ReferralUserIdExtensionAttribute" -match '^[a-fA-F0-9]{8}-[a-fA-F0-9]{4}-[a-fA-F0-9]{4}-[a-fA-F0-9]{4}-[a-fA-F0-9]{12}$'
-                            ) {
-                                Write-Verbose "[GetCloudAdminAccountByTier]: - Expanding referral user account for $($_.userPrincipalName)."
-                                try {
-                                    $_ | Add-Member -MemberType NoteProperty -Name 'referralUserAccount' -Value (
-                                        @(./Common_0002__Find-MgUserWithSoftDeleted.ps1 -UserId $_.onPremisesExtensionAttributes."extensionAttribute$ReferralUserIdExtensionAttribute" -Property @(
-                                                'displayName'
-                                                'userPrincipalName'
-                                                'onPremisesSamAccountName'
-                                                'id'
-                                                'accountEnabled'
-                                                'createdDateTime'
-                                                'deletedDateTime'
-                                                'mail'
-                                                'companyName'
-                                                'department'
-                                                'streetAddress'
-                                                'city'
-                                                'postalCode'
-                                                'state'
-                                                'country'
-                                                'signInActivity'
-                                                'onPremisesExtensionAttributes'
-                                            ) -ExpandProperty @(
-                                                @{
-                                                    manager = @(
-                                                        'displayName'
-                                                        'userPrincipalName'
-                                                        'onPremisesSamAccountName'
-                                                        'id'
-                                                        'accountEnabled'
-                                                        'mail'
-                                                    )
+                            # Return as ordered hashtable to maintain the order of properties
+                            [ordered] @{
+                                securityTierLevel             = $Tier
+                                displayName                   = $_.displayName
+                                userPrincipalName             = $_.userPrincipalName
+                                id                            = $_.id
+                                accountEnabled                = $_.accountEnabled
+                                createdDateTime               = $_.createdDateTime
+                                deletedDateTime               = $_.deletedDateTime
+                                mail                          = $_.mail
+                                signInActivity                = $_.signInActivity
+                                onPremisesExtensionAttributes = $_.onPremisesExtensionAttributes
+                                referralUserAccount           = $(
+                                    if (
+                                        $ExpandReferralUserId -and
+                                        -Not [string]::IsNullOrEmpty($_.onPremisesExtensionAttributes."extensionAttribute$ReferralUserIdExtensionAttribute") -and
+                                        $_.onPremisesExtensionAttributes."extensionAttribute$ReferralUserIdExtensionAttribute" -match '^[a-fA-F0-9]{8}-[a-fA-F0-9]{4}-[a-fA-F0-9]{4}-[a-fA-F0-9]{4}-[a-fA-F0-9]{12}$'
+                                    ) {
+                                        Write-Verbose "[GetCloudAdminAccountByTier]: - Expanding referral user account for $($_.userPrincipalName)."
+                                        try {
+                                            @(
+                                                ./Common_0002__Find-MgUserWithSoftDeleted.ps1 -UserId $_.onPremisesExtensionAttributes."extensionAttribute$ReferralUserIdExtensionAttribute" -Property @(
+                                                    'displayName'
+                                                    'userPrincipalName'
+                                                    'onPremisesSamAccountName'
+                                                    'id'
+                                                    'accountEnabled'
+                                                    'createdDateTime'
+                                                    'deletedDateTime'
+                                                    'mail'
+                                                    'companyName'
+                                                    'department'
+                                                    'streetAddress'
+                                                    'city'
+                                                    'postalCode'
+                                                    'state'
+                                                    'country'
+                                                    'signInActivity'
+                                                    'onPremisesExtensionAttributes'
+                                                ) -ExpandProperty @(
+                                                    @{
+                                                        manager = @(
+                                                            'displayName'
+                                                            'userPrincipalName'
+                                                            'onPremisesSamAccountName'
+                                                            'id'
+                                                            'accountEnabled'
+                                                            'mail'
+                                                        )
+                                                    }
+                                                )
+                                            )[0] | & {
+                                                process {
+                                                    # Return as ordered hashtable to maintain the order of properties
+                                                    [ordered] @{
+                                                        displayName                   = $_.displayName
+                                                        userPrincipalName             = $_.userPrincipalName
+                                                        onPremisesSamAccountName      = $_.onPremisesSamAccountName
+                                                        id                            = $_.id
+                                                        accountEnabled                = $_.accountEnabled
+                                                        createdDateTime               = $_.createdDateTime
+                                                        deletedDateTime               = $_.deletedDateTime
+                                                        mail                          = $_.mail
+                                                        companyName                   = $_.companyName
+                                                        department                    = $_.department
+                                                        streetAddress                 = $_.streetAddress
+                                                        city                          = $_.city
+                                                        postalCode                    = $_.postalCode
+                                                        state                         = $_.state
+                                                        country                       = $_.country
+                                                        signInActivity                = $_.signInActivity
+                                                        onPremisesExtensionAttributes = $_.onPremisesExtensionAttributes
+                                                        manager                       = [ordered] @{
+                                                            displayName              = $_.manager.displayName
+                                                            userPrincipalName        = $_.manager.userPrincipalName
+                                                            onPremisesSamAccountName = $_.manager.onPremisesSamAccountName
+                                                            id                       = $_.manager.id
+                                                            accountEnabled           = $_.manager.accountEnabled
+                                                            mail                     = $_.manager.mail
+                                                        }
+                                                    }
                                                 }
-                                            ))[0] | Where-Object { $_ -ne $null }
-                                    )
-                                }
-                                catch {
-                                    Throw $_
-                                }
-                            }
-                            else {
-                                $_ | Add-Member -MemberType NoteProperty -Name 'referralUserAccount' -Value (
-                                    [PSCustomObject] @{
-                                        id = $_.onPremisesExtensionAttributes."extensionAttribute$ReferralUserIdExtensionAttribute"
+                                            }
+                                        }
+                                        catch {
+                                            Throw $_
+                                        }
+                                    }
+                                    else {
+                                        [ordered] @{
+                                            displayName                   = $null
+                                            userPrincipalName             = $null
+                                            onPremisesSamAccountName      = $null
+                                            id                            = $_.onPremisesExtensionAttributes["extensionAttribute$ReferralUserIdExtensionAttribute"]
+                                            accountEnabled                = $null
+                                            createdDateTime               = $null
+                                            deletedDateTime               = $null
+                                            mail                          = $null
+                                            companyName                   = $null
+                                            department                    = $null
+                                            streetAddress                 = $null
+                                            city                          = $null
+                                            postalCode                    = $null
+                                            state                         = $null
+                                            country                       = $null
+                                            signInActivity                = $null
+                                            onPremisesExtensionAttributes = $null
+                                            manager                       = $null
+                                        }
                                     }
                                 )
                             }
-
-                            # Return the object to the pipeline
-                            $_
                         }
                     }
 
@@ -673,25 +727,26 @@ if ($OutJson) { if ($return.Count -eq 0) { return '[]' }; ./Common_0000__Write-J
 if ($OutCsv) {
     if ($return.Count -eq 0) { return }
 
-    $properties = @{
+    $properties = [ordered] @{
         'lastSignInDateTime'                  = 'signInActivity.lastSignInDateTime'
         'lastNonInteractiveSignInDateTime'    = 'signInActivity.lastNonInteractiveSignInDateTime'
         'lastSuccessfulSignInDateTime'        = 'signInActivity.lastSuccessfulSignInDateTime'
-        'extensionAttribute1'                 = 'onPremisesExtensionAttributes.extensionAttribute1'
-        'extensionAttribute2'                 = 'onPremisesExtensionAttributes.extensionAttribute2'
-        'extensionAttribute3'                 = 'onPremisesExtensionAttributes.extensionAttribute3'
-        'extensionAttribute4'                 = 'onPremisesExtensionAttributes.extensionAttribute4'
-        'extensionAttribute5'                 = 'onPremisesExtensionAttributes.extensionAttribute5'
-        'extensionAttribute6'                 = 'onPremisesExtensionAttributes.extensionAttribute6'
-        'extensionAttribute7'                 = 'onPremisesExtensionAttributes.extensionAttribute7'
-        'extensionAttribute8'                 = 'onPremisesExtensionAttributes.extensionAttribute8'
-        'extensionAttribute9'                 = 'onPremisesExtensionAttributes.extensionAttribute9'
-        'extensionAttribute10'                = 'onPremisesExtensionAttributes.extensionAttribute10'
-        'extensionAttribute11'                = 'onPremisesExtensionAttributes.extensionAttribute11'
-        'extensionAttribute12'                = 'onPremisesExtensionAttributes.extensionAttribute12'
-        'extensionAttribute13'                = 'onPremisesExtensionAttributes.extensionAttribute13'
-        'extensionAttribute14'                = 'onPremisesExtensionAttributes.extensionAttribute14'
-        'extensionAttribute15'                = 'onPremisesExtensionAttributes.extensionAttribute15'
+
+        'onPremExtensionAttribute1'           = 'onPremisesExtensionAttributes.extensionAttribute1'
+        'onPremExtensionAttribute2'           = 'onPremisesExtensionAttributes.extensionAttribute2'
+        'onPremExtensionAttribute3'           = 'onPremisesExtensionAttributes.extensionAttribute3'
+        'onPremExtensionAttribute4'           = 'onPremisesExtensionAttributes.extensionAttribute4'
+        'onPremExtensionAttribute5'           = 'onPremisesExtensionAttributes.extensionAttribute5'
+        'onPremExtensionAttribute6'           = 'onPremisesExtensionAttributes.extensionAttribute6'
+        'onPremExtensionAttribute7'           = 'onPremisesExtensionAttributes.extensionAttribute7'
+        'onPremExtensionAttribute8'           = 'onPremisesExtensionAttributes.extensionAttribute8'
+        'onPremExtensionAttribute9'           = 'onPremisesExtensionAttributes.extensionAttribute9'
+        'onPremExtensionAttribute10'          = 'onPremisesExtensionAttributes.extensionAttribute10'
+        'onPremExtensionAttribute11'          = 'onPremisesExtensionAttributes.extensionAttribute11'
+        'onPremExtensionAttribute12'          = 'onPremisesExtensionAttributes.extensionAttribute12'
+        'onPremExtensionAttribute13'          = 'onPremisesExtensionAttributes.extensionAttribute13'
+        'onPremExtensionAttribute14'          = 'onPremisesExtensionAttributes.extensionAttribute14'
+        'onPremExtensionAttribute15'          = 'onPremisesExtensionAttributes.extensionAttribute15'
 
         'refDisplayName'                      = 'referralUserAccount.displayName'
         'refUserPrincipalName'                = 'referralUserAccount.userPrincipalName'
@@ -711,21 +766,21 @@ if ($OutCsv) {
         'refLastSignInDateTime'               = 'referralUserAccount.signInActivity.lastSignInDateTime'
         'refLastNonInteractiveSignInDateTime' = 'referralUserAccount.signInActivity.lastNonInteractiveSignInDateTime'
         'refLastSuccessfulSignInDateTime'     = 'referralUserAccount.signInActivity.lastSuccessfulSignInDateTime'
-        'refExtensionAttribute1'              = 'referralUserAccount.onPremisesExtensionAttributes.extensionAttribute1'
-        'refExtensionAttribute2'              = 'referralUserAccount.onPremisesExtensionAttributes.extensionAttribute2'
-        'refExtensionAttribute3'              = 'referralUserAccount.onPremisesExtensionAttributes.extensionAttribute3'
-        'refExtensionAttribute4'              = 'referralUserAccount.onPremisesExtensionAttributes.extensionAttribute4'
-        'refExtensionAttribute5'              = 'referralUserAccount.onPremisesExtensionAttributes.extensionAttribute5'
-        'refExtensionAttribute6'              = 'referralUserAccount.onPremisesExtensionAttributes.extensionAttribute6'
-        'refExtensionAttribute7'              = 'referralUserAccount.onPremisesExtensionAttributes.extensionAttribute7'
-        'refExtensionAttribute8'              = 'referralUserAccount.onPremisesExtensionAttributes.extensionAttribute8'
-        'refExtensionAttribute9'              = 'referralUserAccount.onPremisesExtensionAttributes.extensionAttribute9'
-        'refExtensionAttribute10'             = 'referralUserAccount.onPremisesExtensionAttributes.extensionAttribute10'
-        'refExtensionAttribute11'             = 'referralUserAccount.onPremisesExtensionAttributes.extensionAttribute11'
-        'refExtensionAttribute12'             = 'referralUserAccount.onPremisesExtensionAttributes.extensionAttribute12'
-        'refExtensionAttribute13'             = 'referralUserAccount.onPremisesExtensionAttributes.extensionAttribute13'
-        'refExtensionAttribute14'             = 'referralUserAccount.onPremisesExtensionAttributes.extensionAttribute14'
-        'refExtensionAttribute15'             = 'referralUserAccount.onPremisesExtensionAttributes.extensionAttribute15'
+        'refOnPremExtensionAttribute1'        = 'referralUserAccount.onPremisesExtensionAttributes.extensionAttribute1'
+        'refOnPremExtensionAttribute2'        = 'referralUserAccount.onPremisesExtensionAttributes.extensionAttribute2'
+        'refOnPremExtensionAttribute3'        = 'referralUserAccount.onPremisesExtensionAttributes.extensionAttribute3'
+        'refOnPremExtensionAttribute4'        = 'referralUserAccount.onPremisesExtensionAttributes.extensionAttribute4'
+        'refOnPremExtensionAttribute5'        = 'referralUserAccount.onPremisesExtensionAttributes.extensionAttribute5'
+        'refOnPremExtensionAttribute6'        = 'referralUserAccount.onPremisesExtensionAttributes.extensionAttribute6'
+        'refOnPremExtensionAttribute7'        = 'referralUserAccount.onPremisesExtensionAttributes.extensionAttribute7'
+        'refOnPremExtensionAttribute8'        = 'referralUserAccount.onPremisesExtensionAttributes.extensionAttribute8'
+        'refOnPremExtensionAttribute9'        = 'referralUserAccount.onPremisesExtensionAttributes.extensionAttribute9'
+        'refOnPremExtensionAttribute10'       = 'referralUserAccount.onPremisesExtensionAttributes.extensionAttribute10'
+        'refOnPremExtensionAttribute11'       = 'referralUserAccount.onPremisesExtensionAttributes.extensionAttribute11'
+        'refOnPremExtensionAttribute12'       = 'referralUserAccount.onPremisesExtensionAttributes.extensionAttribute12'
+        'refOnPremExtensionAttribute13'       = 'referralUserAccount.onPremisesExtensionAttributes.extensionAttribute13'
+        'refOnPremExtensionAttribute14'       = 'referralUserAccount.onPremisesExtensionAttributes.extensionAttribute14'
+        'refOnPremExtensionAttribute15'       = 'referralUserAccount.onPremisesExtensionAttributes.extensionAttribute15'
 
         'managerDisplayName'                  = 'referralUserAccount.manager.displayName'
         'managerUserPrincipalName'            = 'referralUserAccount.manager.userPrincipalName'
@@ -735,91 +790,32 @@ if ($OutCsv) {
         'managerMail'                         = 'referralUserAccount.manager.mail'
     }
 
-    ./Common_0000__Write-CsvOutput.ps1 -InputObject (
+    ./Common_0000__Write-CsvOutput.ps1 -InputObject $(
         $return | & {
             process {
+
+                # Flatten nested properties
                 foreach ($property in $properties.GetEnumerator()) {
                     $nestedPropertyPath = $property.Value -split '\.'
                     if ($nestedPropertyPath.count -eq 3) {
-                        $_ | Add-Member -NotePropertyName $property.Key -NotePropertyValue $_.$($nestedPropertyPath[0]).$($nestedPropertyPath[1]).$($nestedPropertyPath[2])
+                        Write-Verbose "Flattening property $($property.Value) as $($property.Key)"
+                        $_.$($property.Key) = $_.$($nestedPropertyPath[0]).$($nestedPropertyPath[1]).$($nestedPropertyPath[2])
                     }
                     elseif ($nestedPropertyPath.count -eq 2) {
-                        $_ | Add-Member -NotePropertyName $property.Key -NotePropertyValue $_.$($nestedPropertyPath[0]).$($nestedPropertyPath[1])
+                        Write-Verbose "Flattening property $($property.Value) as $($property.Key)"
+                        $_.$($property.Key) = $_.$($nestedPropertyPath[0]).$($nestedPropertyPath[1])
                     }
                     else {
                         Throw "Invalid nested property path: $($property.Value)"
                     }
                 }
 
-                $_ | Select-Object -Property @(
-                    'securityTierLevel'
-                    'displayName'
-                    'userPrincipalName'
-                    'id'
-                    'accountEnabled'
-                    'createdDateTime'
-                    'deletedDateTime'
-                    'mail'
-                    'lastSignInDateTime'
-                    'lastNonInteractiveSignInDateTime'
-                    'lastSuccessfulSignInDateTime'
-                    'extensionAttribute1'
-                    'extensionAttribute2'
-                    'extensionAttribute3'
-                    'extensionAttribute4'
-                    'extensionAttribute5'
-                    'extensionAttribute6'
-                    'extensionAttribute7'
-                    'extensionAttribute8'
-                    'extensionAttribute9'
-                    'extensionAttribute10'
-                    'extensionAttribute11'
-                    'extensionAttribute12'
-                    'extensionAttribute13'
-                    'extensionAttribute14'
-                    'extensionAttribute15'
+                $_.Remove('signInActivity')
+                $_.Remove('onPremisesExtensionAttributes')
+                $_.Remove('referralUserAccount')
 
-                    'refDisplayName'
-                    'refUserPrincipalName'
-                    'refOnPremisesSamAccountName'
-                    'refId'
-                    'refAccountEnabled'
-                    'refCreatedDateTime'
-                    'refDeletedDateTime'
-                    'refMail'
-                    'refCompanyName'
-                    'refDepartment'
-                    'refStreetAddress'
-                    'refCity'
-                    'refPostalCode'
-                    'refState'
-                    'refCountry'
-                    'refLastSignInDateTime'
-                    'refLastNonInteractiveSignInDateTime'
-                    'refLastSuccessfulSignInDateTime'
-                    'refExtensionAttribute1'
-                    'refExtensionAttribute2'
-                    'refExtensionAttribute3'
-                    'refExtensionAttribute4'
-                    'refExtensionAttribute5'
-                    'refExtensionAttribute6'
-                    'refExtensionAttribute7'
-                    'refExtensionAttribute8'
-                    'refExtensionAttribute9'
-                    'refExtensionAttribute10'
-                    'refExtensionAttribute11'
-                    'refExtensionAttribute12'
-                    'refExtensionAttribute13'
-                    'refExtensionAttribute14'
-                    'refExtensionAttribute15'
-
-                    'managerDisplayName'
-                    'managerUserPrincipalName'
-                    'managerOnPremisesSamAccountName'
-                    'managerId'
-                    'managerAccountEnabled'
-                    'managerMail'
-                )
+                # Return the hashtable to the pipeline
+                $_
             }
         }
     ) -StorageUri $(

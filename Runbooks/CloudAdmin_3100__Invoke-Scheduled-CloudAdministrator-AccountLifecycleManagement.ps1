@@ -1,5 +1,5 @@
 <#PSScriptInfo
-.VERSION 1.2.0
+.VERSION 1.3.0
 .GUID ae957fef-f6c2-458d-bf37-27211dfd2640
 .AUTHOR Julian Pawlowski
 .COMPANYNAME Workoho GmbH
@@ -12,8 +12,8 @@
 .REQUIREDSCRIPTS CloudAdmin_0000__Common_0000__Get-ConfigurationConstants.ps1,CloudAdmin_0000__Common_0001__Get-CloudAdminAccountsByPrimaryAccount.ps1
 .EXTERNALSCRIPTDEPENDENCIES https://github.com/workoho/AzAuto-Common-Runbook-FW
 .RELEASENOTES
-    Version 1.2.0 (2024-06-20)
-    - Add metadata to CSV output.
+    Version 1.3.0 (2024-06-23)
+    - Fixed CSV output when using hashtables.
 #>
 
 <#
@@ -289,7 +289,7 @@ $return = @{
         ) {
             if ($null -ne $_.deletedDateTime) {
                 Write-Warning "$($_.userPrincipalName) ($($_.Id)): - Account has no existing referral account. Waiting for Microsoft Entra 30 days retention period to expire."
-                $_ | Add-Member -MemberType NoteProperty -Name "accountLifecycle" -Value @{
+                $_.accountLifecycle = @{
                     action       = 'None'
                     actionReason = 'MissingReferralAccount'
                     status       = 'WaitForRetentionPeriod'
@@ -320,7 +320,7 @@ $return = @{
                 }
 
                 Write-Warning "$($_.userPrincipalName) ($($_.Id)): - Soft-Deleted account due to missing referral account."
-                $_ | Add-Member -MemberType NoteProperty -Name "accountLifecycle" -Value @{
+                $_.accountLifecycle = @{
                     action       = 'SoftDelete'
                     actionReason = 'MissingReferralAccount'
                     status       = 'SoftDeleted'
@@ -329,7 +329,7 @@ $return = @{
             }
             else {
                 Write-Warning "$($_.userPrincipalName) ($($_.Id)): - Account has no existing referral account and should be deleted, but no automatic deletion is performed."
-                $_ | Add-Member -MemberType NoteProperty -Name "accountLifecycle" -Value @{
+                $_.accountLifecycle = @{
                     action       = 'DeferredSoftDelete'
                     actionReason = 'MissingReferralAccount'
                     status       = 'ToBeSoftDeleted'
@@ -359,7 +359,7 @@ $return = @{
                 }
 
                 Write-Warning "$($_.userPrincipalName) ($($_.Id)): - Soft-Deleted account due to soft-deleted referral account."
-                $_ | Add-Member -MemberType NoteProperty -Name "accountLifecycle" -Value @{
+                $_.accountLifecycle = @{
                     Action = 'SoftDelete'
                     Status = 'SoftDeleted'
                     Reason = 'SoftDeletedReferralAccount'
@@ -368,7 +368,7 @@ $return = @{
             }
             else {
                 Write-Warning "$($_.userPrincipalName) ($($_.Id)): - Account has no existing referral account and should be soft-deleted, but no automatic soft-deletion is performed."
-                $_ | Add-Member -MemberType NoteProperty -Name "accountLifecycle" -Value @{
+                $_.accountLifecycle = @{
                     action       = 'DeferredSoftDelete'
                     actionReason = 'SoftDeletedReferralAccount'
                     status       = 'ToBeSoftDeleted'
@@ -406,7 +406,7 @@ $return = @{
             }
 
             Write-Warning "$($_.userPrincipalName) ($($_.Id)): - Restored account due to existing referral account."
-            $_ | Add-Member -MemberType NoteProperty -Name "accountLifecycle" -Value @{
+            $_.accountLifecycle = @{
                 action       = 'Restore'
                 actionReason = 'ExistingReferralAccount'
                 status       = 'Restored'
@@ -415,7 +415,7 @@ $return = @{
         }
         else {
             Write-Warning "$($_.userPrincipalName) ($($_.Id)): - Account has existing referral account and should be restored, but no automatic restore is performed."
-            $_ | Add-Member -MemberType NoteProperty -Name "accountLifecycle" -Value @{
+            $_.accountLifecycle = @{
                 action       = 'DeferredRestore'
                 actionReason = 'ExistingReferralAccount'
                 status       = 'ToBeSoftRestored'
@@ -460,7 +460,7 @@ $return = @{
 
                 Write-Warning "$($_.userPrincipalName) ($($_.Id)): - Disabled account to match referral account."
                 $_.AccountEnabled = $false
-                $_ | Add-Member -MemberType NoteProperty -Name "accountLifecycle" -Value @{
+                $_.accountLifecycle = @{
                     action       = 'Disable'
                     actionReason = 'DisabledReferralAccount'
                     status       = 'Disabled'
@@ -468,7 +468,7 @@ $return = @{
             }
             else {
                 Write-Warning "$($_.userPrincipalName) ($($_.Id)): - Account is enabled and referral account is disabled, but no automatic disabling is performed."
-                $_ | Add-Member -MemberType NoteProperty -Name "accountLifecycle" -Value @{
+                $_.accountLifecycle = @{
                     action       = 'DeferredDisable'
                     actionReason = 'DisabledReferralAccount'
                     status       = 'ToBeDisabled'
@@ -514,7 +514,7 @@ $return = @{
 
                 Write-Warning "$($_.userPrincipalName) ($($_.Id)): - Enabled account to match referral account."
                 $_.AccountEnabled = $true
-                $_ | Add-Member -MemberType NoteProperty -Name "accountLifecycle" -Value @{
+                $_.accountLifecycle = @{
                     action       = 'Enable'
                     actionReason = 'EnabledReferralAccount'
                     status       = 'Enabled'
@@ -522,7 +522,7 @@ $return = @{
             }
             else {
                 Write-Warning "$($_.userPrincipalName) ($($_.Id)): - Account is disabled and referral account is enabled, but no automatic enabling is performed."
-                $_ | Add-Member -MemberType NoteProperty -Name "accountLifecycle" -Value @{
+                $_.accountLifecycle = @{
                     action       = 'DeferredEnable'
                     actionReason = 'EnabledReferralAccount'
                     status       = 'ToBeEnabled'
@@ -567,7 +567,7 @@ if ($OutJson) { ./Common_0000__Write-JsonOutput.ps1 $return; if ($concurrentJobs
 if ($OutCsv) {
     if ($return.Output.Count -eq 0) { return }
 
-    $properties = @{
+    $properties = [ordered] @{
         'lastSuccessfulSignInDateTime'    = 'signInActivity.lastSuccessfulSignInDateTime'
         'lifecycleAction'                 = 'accountLifecycle.action'
         'lifecycleActionReason'           = 'accountLifecycle.actionReason'
@@ -597,47 +597,23 @@ if ($OutCsv) {
                 foreach ($property in $properties.GetEnumerator()) {
                     $nestedPropertyPath = $property.Value -split '\.'
                     if ($nestedPropertyPath.count -eq 3) {
-                        $_ | Add-Member -NotePropertyName $property.Key -NotePropertyValue $_.$($nestedPropertyPath[0]).$($nestedPropertyPath[1]).$($nestedPropertyPath[2])
+                        $_.$($property.Key) = $_.$($nestedPropertyPath[0]).$($nestedPropertyPath[1]).$($nestedPropertyPath[2])
                     }
                     elseif ($nestedPropertyPath.count -eq 2) {
-                        $_ | Add-Member -NotePropertyName $property.Key -NotePropertyValue $_.$($nestedPropertyPath[0]).$($nestedPropertyPath[1])
+                        $_.$($property.Key) = $_.$($nestedPropertyPath[0]).$($nestedPropertyPath[1])
                     }
                     else {
                         Throw "Invalid nested property path: $($property.Value)"
                     }
                 }
 
-                $_ | Select-Object -Property @(
-                    'securityTierLevel'
-                    'displayName'
-                    'userPrincipalName'
-                    'id'
-                    'accountEnabled'
-                    'createdDateTime'
-                    'deletedDateTime'
-                    'mail'
-                    'lastSuccessfulSignInDateTime'
-                    'lifecycleAction'
-                    'lifecycleActionReason'
-                    'lifecycleStatus'
+                $_.Remove('signInActivity')
+                $_.Remove('onPremisesExtensionAttributes')
+                $_.Remove('referralUserAccount')
+                $_.Remove('accountLifecycle')
 
-                    'refDisplayName'
-                    'refUserPrincipalName'
-                    'refOnPremisesSamAccountName'
-                    'refId'
-                    'refAccountEnabled'
-                    'refCreatedDateTime'
-                    'refDeletedDateTime'
-                    'refMail'
-                    'refLastSuccessfulSignInDateTime'
-
-                    'managerDisplayName'
-                    'managerUserPrincipalName'
-                    'managerOnPremisesSamAccountName'
-                    'managerId'
-                    'managerAccountEnabled'
-                    'managerMail'
-                )
+                # Return the hashtable to the pipeline
+                $_
             }
         }
     ) -StorageUri $(
