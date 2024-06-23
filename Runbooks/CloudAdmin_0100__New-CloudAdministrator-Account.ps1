@@ -1,5 +1,5 @@
 <#PSScriptInfo
-.VERSION 1.5.0
+.VERSION 1.5.1
 .GUID 03b78b5d-1e83-44bc-83ce-a5c0f101461b
 .AUTHOR Julian Pawlowski
 .COMPANYNAME Workoho GmbH
@@ -12,9 +12,9 @@
 .REQUIREDSCRIPTS CloudAdmin_0000__Common_0000__Get-ConfigurationConstants.ps1
 .EXTERNALSCRIPTDEPENDENCIES https://github.com/workoho/AzAuto-Common-Runbook-FW
 .RELEASENOTES
-    Version 1.5.0 (2024-06-17)
-    - Rewrite to use Common_0001__Invoke-MgGraphRequest.ps1 for all Microsoft Graph API calls.
-    - Remove all Microsoft.Graph module dependencies, except Microsoft.Graph.Authentication.
+    Version 1.5.1 (2024-06-23)
+    - Fix license processing
+    - Remove free license validation when updating existing accounts
 #>
 
 <#
@@ -541,7 +541,7 @@ $SkuPartNumberWithExchangeServicePlan = $null
 @(($LicenseSkuPartNumber_Tier0 -split ' '); ($LicenseSkuPartNumber_Tier1 -split ' '); ($LicenseSkuPartNumber_Tier2 -split ' ')) | Where-Object { -Not [string]::IsNullOrEmpty($_) } | Select-Object -Unique | & {
     process {
         $SkuPartNumber = $_
-        $Sku = $TenantSubscriptions | Where-Object { $_.SkuPartNumber -eq $SkuPartNumber } | Select-Object -Property Sku*, ServicePlans
+        $Sku = $TenantSubscriptions | Where-Object { $_.SkuPartNumber -eq $SkuPartNumber }
         if (-Not $Sku) {
             Throw "[LicenseExistanceValidation]: - License SkuPartNumber $SkuPartNumber is not available to this tenant. Licenses must be purchased before creating Cloud Administrator accounts."
         }
@@ -2177,7 +2177,7 @@ Function ProcessReferralUser ($ReferralUserId, $LocalUserId, $Tier, $UserPhotoUr
     }
     else {
         #region License Availability Validation Before New Account Creation ------------
-        $TenantSubscriptions = (./Common_0001__Invoke-MgGraphRequest.ps1 @{ Uri = '/v1.0/subscribedSkus'; ErrorAction = 'Stop'; Verbose = $false; Debug = $false }).value | Where-Object { $_.SkuPartNumber -in $LicenseSkuPartNumbers } | Select-Object -Property Sku*, ConsumedUnits, ServicePlans, PrepaidUnits | & {
+        $TenantSubscriptions = (./Common_0001__Invoke-MgGraphRequest.ps1 @{ Uri = '/v1.0/subscribedSkus'; ErrorAction = 'Stop'; Verbose = $false; Debug = $false }).value | Where-Object { $_.SkuPartNumber -in $LicenseSkuPartNumbers } | & {
             process {
                 if ($_.ConsumedUnits -ge $_.PrepaidUnits.Enabled) {
                     [void] $script:returnError.Add(( ./Common_0000__Write-Error.ps1 @{
@@ -2403,34 +2403,6 @@ Function ProcessReferralUser ($ReferralUserId, $LocalUserId, $Tier, $UserPhotoUr
     }
     #endregion ---------------------------------------------------------------------
 
-    #region License Availability Validation For Pre-Existing Account ---------------
-    if (-Not $TenantSubscriptions) {
-        $TenantSubscriptions = (./Common_0001__Invoke-MgGraphRequest.ps1 @{ Uri = '/v1.0/subscribedSkus'; ErrorAction = 'Stop'; Verbose = $false; Debug = $false }).value | Where-Object { $_.SkuPartNumber -in $LicenseSkuPartNumbers } | Select-Object -Property Sku*, ConsumedUnits, ServicePlans, PrepaidUnits | & {
-            process {
-                if ($_.ConsumedUnits -ge $_.PrepaidUnits.Enabled) {
-                    [void] $script:returnError.Add(( ./Common_0000__Write-Error.ps1 @{
-                                Message           = "${ReferralUserId}: License SkuPartNumber $($_.SkuPartNumber) has run out of free licenses."
-                                ErrorId           = '503'
-                                Category          = 'LimitsExceeded'
-                                TargetName        = $refUserObj.userPrincipalName
-                                TargetObject      = $refUserObj.id
-                                TargetType        = 'UserId'
-                                RecommendedAction = 'Purchase additional licenses to create new Cloud Administrator accounts.'
-                                CategoryActivity  = 'License Availability Validation'
-                                CategoryReason    = "License SkuPartNumber $($_.SkuPartNumber) has run out of free licenses."
-                            }))
-                    $script:persistentError = $true
-                }
-                else {
-                    Write-Verbose "[ProcessReferralUserDedicatedAccountUpdate]: - License SkuPartNumber $($_.SkuPartNumber) has at least 1 free license available to continue"
-                    $_
-                }
-            }
-        }
-        if ($persistentError) { return }
-    }
-    #endregion ---------------------------------------------------------------------
-
     #region Direct License Assignment ----------------------------------------------
     if (-Not $LicenseGroupObj) {
         Write-Verbose "[ProcessReferralUserDedicatedAccountDirectLicensing]: - Implying direct license assignment is required as no GroupId was provided for group-based licensing."
@@ -2450,9 +2422,13 @@ Function ProcessReferralUser ($ReferralUserId, $LocalUserId, $Tier, $UserPhotoUr
                         SkuId = $Sku.SkuId
                     }
                     if ($SkuPartNumber -eq $SkuPartNumberWithExchangeServicePlan) {
-                        $license.DisabledPlans = $Sku.ServicePlans | Where-Object { $_.AppliesTo -eq 'User' -and $_.ServicePlanName -NotMatch 'EXCHANGE' } | Select-Object -ExpandProperty ServicePlanId
+                        $disabledPlans = [System.Collections.ArrayList]::new()
+                        $Sku.ServicePlans | Where-Object { $_.AppliesTo -eq 'User' -and $_.ServicePlanName -NotMatch 'EXCHANGE' } | ForEach-Object {
+                            [void] $disabledPlans.Add($_.ServicePlanId)
+                        }
+                        $license.DisabledPlans = $disabledPlans
                     }
-                    $params.AddLicenses += $license
+                    [void] $params.AddLicenses.Add($license)
                 }
             }
         }
