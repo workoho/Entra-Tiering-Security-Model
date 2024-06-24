@@ -40,6 +40,8 @@
         "ms-vscode.vscode-github-issue-notebooks",
         "github.vscode-pull-request-github",
         "bierner.github-markdown-preview",
+        "github.vscode-github-actions",
+        "me-dutour-mathieu.vscode-github-actions",
 
         // Markdown related extensions
         "davidanson.vscode-markdownlint",
@@ -49,9 +51,14 @@
         "ms-vscode.powershell",
         "martinfliegner.dark-powershell-theme",
 
+        // YAML related extensions
+        "redhat.vscode-yaml",
+
         // Azure related extensions
         "ms-azuretools.vscode-azureresourcegroups",
-        "ms-azuretools.vscode-azurestorage"
+        "ms-azuretools.vscode-azurestorage",
+        "ms-azuretools.vscode-docker",
+        "ms-azuretools.vscode-bicep"
 			]
 		}
 	}
