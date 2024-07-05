@@ -118,6 +118,47 @@ function PSScriptAnalyzer_CustomRule_InvokeRestMethod {
                 return $diagnosticRecord
             }
 
+            # Check for usage of Invoke-RestMethod without -UseBasicParsing parameter
+            if ($node.CommandElements[0].Value -eq 'Invoke-RestMethod' -and $node.CommandElements.Value -notContains '-UseBasicParsing') {
+                $violationMessage = "Invoke-RestMethod in PowerShell 5.1 should be used with the -UseBasicParsing parameter to avoid dependency on Internet Explorer."
+                $extent = $node.Extent
+                $diagnosticRecord = New-Object -TypeName Microsoft.Windows.PSScriptAnalyzer.Generic.DiagnosticRecord -ArgumentList $violationMessage, $extent, 'CustomRule', 'Warning', $null, $null
+                return $diagnosticRecord
+            }
+
+            return $null
+        }, $true)
+
+    return $findings
+}
+
+function PSScriptAnalyzer_CustomRule_InvokeWebRequest {
+    [CmdletBinding()]
+    param(
+        [Parameter(Mandatory = $true)]
+        [System.Management.Automation.Language.ScriptBlockAst] $Ast
+    )
+
+    # Check for usage of Invoke-WebRequest
+    $findings = $Ast.FindAll({
+            param($node)
+
+            # Check for usage of Invoke-WebRequest with -SkipCertificateCheck parameter
+            if ($node.CommandElements[0].Value -eq 'Invoke-WebRequest' -and $node.CommandElements.Value -contains '-SkipCertificateCheck') {
+                $violationMessage = "Invoke-WebRequest in PowerShell 5.1 does not support the -SkipCertificateCheck parameter."
+                $extent = $node.Extent
+                $diagnosticRecord = New-Object -TypeName Microsoft.Windows.PSScriptAnalyzer.Generic.DiagnosticRecord -ArgumentList $violationMessage, $extent, 'CustomRule', 'Warning', $null, $null
+                return $diagnosticRecord
+            }
+
+            # Check for usage of Invoke-WebRequest without -UseBasicParsing parameter
+            if ($node.CommandElements[0].Value -eq 'Invoke-WebRequest' -and $node.CommandElements.Value -notContains '-UseBasicParsing') {
+                $violationMessage = "Invoke-WebRequest in PowerShell 5.1 should be used with the -UseBasicParsing parameter to avoid dependency on Internet Explorer."
+                $extent = $node.Extent
+                $diagnosticRecord = New-Object -TypeName Microsoft.Windows.PSScriptAnalyzer.Generic.DiagnosticRecord -ArgumentList $violationMessage, $extent, 'CustomRule', 'Warning', $null, $null
+                return $diagnosticRecord
+            }
+
             return $null
         }, $true)
 
@@ -166,4 +207,5 @@ Export-ModuleMember -Function PSScriptAnalyzer_CustomRule_SplitPath
 Export-ModuleMember -Function PSScriptAnalyzer_CustomRule_GetChildItem
 Export-ModuleMember -Function PSScriptAnalyzer_CustomRule_ConvertToJson
 Export-ModuleMember -Function PSScriptAnalyzer_CustomRule_InvokeRestMethod
+Export-ModuleMember -Function PSScriptAnalyzer_CustomRule_InvokeWebRequest
 Export-ModuleMember -Function PSScriptAnalyzer_CustomRule_NewObject

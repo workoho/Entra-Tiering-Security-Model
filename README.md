@@ -144,9 +144,8 @@ We assume that the following requirements for your local Windows, macOS, or Linu
 
 4. Following PowerShell modules are installed:
 
-   - `Microsoft.Graph`
-   - `Microsoft.Graph.Beta`
    - `Az`
+   - `Microsoft.Graph`
 
    For local run and/or development, further modules are required:
 
