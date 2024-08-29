@@ -1,5 +1,5 @@
 <#PSScriptInfo
-.VERSION 1.3.0
+.VERSION 1.4.0
 .GUID ae957fef-f6c2-458d-bf37-27211dfd2640
 .AUTHOR Julian Pawlowski
 .COMPANYNAME Workoho GmbH
@@ -12,8 +12,8 @@
 .REQUIREDSCRIPTS CloudAdmin_0000__Common_0000__Get-ConfigurationConstants.ps1,CloudAdmin_0000__Common_0001__Get-CloudAdminAccountsByPrimaryAccount.ps1
 .EXTERNALSCRIPTDEPENDENCIES https://github.com/workoho/AzAuto-Common-Runbook-FW
 .RELEASENOTES
-    Version 1.3.0 (2024-06-23)
-    - Fixed CSV output when using hashtables.
+    Version 1.4.0 (2024-08-29)
+    - Remove Directory.Write.Restricted checks, see MC866450
 #>
 
 <#
@@ -142,7 +142,6 @@ if (
 
     # Write permissions
     'User.ReadWrite.All'
-    'Directory.Write.Restricted'
 )
 #endregion ---------------------------------------------------------------------
 

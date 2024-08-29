@@ -1,5 +1,5 @@
 <#PSScriptInfo
-.VERSION 1.5.1
+.VERSION 1.6.0
 .GUID 03b78b5d-1e83-44bc-83ce-a5c0f101461b
 .AUTHOR Julian Pawlowski
 .COMPANYNAME Workoho GmbH
@@ -12,9 +12,8 @@
 .REQUIREDSCRIPTS CloudAdmin_0000__Common_0000__Get-ConfigurationConstants.ps1
 .EXTERNALSCRIPTDEPENDENCIES https://github.com/workoho/AzAuto-Common-Runbook-FW
 .RELEASENOTES
-    Version 1.5.1 (2024-06-23)
-    - Fix license processing
-    - Remove free license validation when updating existing accounts
+    Version 1.6.0 (2024-08-29)
+    - Remove Directory.Write.Restricted checks, see MC866450
 #>
 
 <#
@@ -392,11 +391,6 @@ $AdminUnitIsMemberManagementRestricted = $false
         }
     }
 }
-if ($AdminUnitIsMemberManagementRestricted) {
-    ./Common_0001__Connect-MgGraph.ps1 -WarningAction SilentlyContinue -Scopes @(
-        'Directory.Write.Restricted'
-    )
-}
 #endregion ---------------------------------------------------------------------
 
 #region Required Microsoft Entra Directory Permissions Validation --------------
@@ -704,10 +698,6 @@ if (
                     Write-Warning "[GroupValidation]: - Group $($GroupObj.DisplayName) ($($GroupObj.id)): You may consider enabling dynamic group membership to better ensure proper license assignment at all times (e.g. not loosing mailbox and email forwarding by accidentially removing an account from the group)."
                 }
             }
-
-            ./Common_0001__Connect-MgGraph.ps1 -WarningAction SilentlyContinue -Scopes @(
-                'Directory.Write.Restricted'
-            )
         }
 
         if ($GroupObj.Visibility -ne 'Private') {

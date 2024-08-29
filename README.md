@@ -493,7 +493,6 @@ _User consent_:
 - `Application.Read.All`
 - `AppRoleAssignment.ReadWrite.All`
 - `Directory.Read.All`
-- `Directory.Write.Restricted`
 - `Group.Read.All`
 - `Group.ReadWrite.All`
 - `Organization.Read.All`
@@ -507,7 +506,7 @@ _User consent_:
 > :information_source: To pre-approve all required scopes at once, you may run the following command:
 >
 > ```powershell
-> Connect-MgGraph -ContextScope Process -Scopes "AdministrativeUnit.Read.All AdministrativeUnit.ReadWrite.All Application.Read.All AppRoleAssignment.ReadWrite.All Directory.Read.All Directory.Write.Restricted Group.Read.All Group.ReadWrite.All Organization.Read.All RoleManagement.Read.Directory RoleManagement.ReadWrite.Directory"
+> Connect-MgGraph -ContextScope Process -Scopes "AdministrativeUnit.Read.All AdministrativeUnit.ReadWrite.All Application.Read.All AppRoleAssignment.ReadWrite.All Directory.Read.All Group.Read.All Group.ReadWrite.All Organization.Read.All RoleManagement.Read.Directory RoleManagement.ReadWrite.Directory"
 > ```
 >
 > Please note that it is highly recommended to refrain from selecting _"Consent on behalf of your organization"_, also known as [admin consent](https://learn.microsoft.com/en-us/entra/identity/enterprise-apps/user-admin-consent-overview#admin-consent). Instead, you should work with user consent for each individual user to contribute to the [principle of least privilege](https://learn.microsoft.com/en-us/entra/identity-platform/secure-least-privileged-access).
