@@ -15,6 +15,7 @@
     Version 1.6.1 (2024-08-29)
     - Remove Directory.Write.Restricted checks, see MC866450
     - Add capability status filter for subscriptions validation
+    - Consider expiring licenses for validation
 #>
 
 <#
@@ -2170,7 +2171,7 @@ Function ProcessReferralUser ($ReferralUserId, $LocalUserId, $Tier, $UserPhotoUr
         #region License Availability Validation Before New Account Creation ------------
         $TenantSubscriptions = (./Common_0001__Invoke-MgGraphRequest.ps1 @{ Uri = '/v1.0/subscribedSkus'; ErrorAction = 'Stop'; Verbose = $false; Debug = $false }).value | Where-Object { $_.SkuPartNumber -in $LicenseSkuPartNumbers -and $_.CapabilityStatus -eq 'Enabled' } | & {
             process {
-                if ($_.ConsumedUnits -ge $_.PrepaidUnits.Enabled) {
+                if ($_.ConsumedUnits -ge ($_.PrepaidUnits.Enabled + $_.PrepaidUnits.Warning)) {
                     [void] $script:returnError.Add(( ./Common_0000__Write-Error.ps1 @{
                                 Message           = "${ReferralUserId}: License SkuPartNumber $($_.SkuPartNumber) has run out of free licenses."
                                 ErrorId           = '503'
