@@ -12,8 +12,9 @@
 .REQUIREDSCRIPTS CloudAdmin_0000__Common_0000__Get-ConfigurationConstants.ps1
 .EXTERNALSCRIPTDEPENDENCIES https://github.com/workoho/AzAuto-Common-Runbook-FW
 .RELEASENOTES
-    Version 1.6.0 (2024-08-29)
+    Version 1.6.1 (2024-08-29)
     - Remove Directory.Write.Restricted checks, see MC866450
+    - Add capability status filter for subscriptions validation
 #>
 
 <#
@@ -535,7 +536,7 @@ $SkuPartNumberWithExchangeServicePlan = $null
 @(($LicenseSkuPartNumber_Tier0 -split ' '); ($LicenseSkuPartNumber_Tier1 -split ' '); ($LicenseSkuPartNumber_Tier2 -split ' ')) | Where-Object { -Not [string]::IsNullOrEmpty($_) } | Select-Object -Unique | & {
     process {
         $SkuPartNumber = $_
-        $Sku = $TenantSubscriptions | Where-Object { $_.SkuPartNumber -eq $SkuPartNumber }
+        $Sku = $TenantSubscriptions | Where-Object { $_.SkuPartNumber -eq $SkuPartNumber -and $_.CapabilityStatus -eq 'Enabled' }
         if (-Not $Sku) {
             Throw "[LicenseExistanceValidation]: - License SkuPartNumber $SkuPartNumber is not available to this tenant. Licenses must be purchased before creating Cloud Administrator accounts."
         }
@@ -2167,7 +2168,7 @@ Function ProcessReferralUser ($ReferralUserId, $LocalUserId, $Tier, $UserPhotoUr
     }
     else {
         #region License Availability Validation Before New Account Creation ------------
-        $TenantSubscriptions = (./Common_0001__Invoke-MgGraphRequest.ps1 @{ Uri = '/v1.0/subscribedSkus'; ErrorAction = 'Stop'; Verbose = $false; Debug = $false }).value | Where-Object { $_.SkuPartNumber -in $LicenseSkuPartNumbers } | & {
+        $TenantSubscriptions = (./Common_0001__Invoke-MgGraphRequest.ps1 @{ Uri = '/v1.0/subscribedSkus'; ErrorAction = 'Stop'; Verbose = $false; Debug = $false }).value | Where-Object { $_.SkuPartNumber -in $LicenseSkuPartNumbers -and $_.CapabilityStatus -eq 'Enabled' } | & {
             process {
                 if ($_.ConsumedUnits -ge $_.PrepaidUnits.Enabled) {
                     [void] $script:returnError.Add(( ./Common_0000__Write-Error.ps1 @{
