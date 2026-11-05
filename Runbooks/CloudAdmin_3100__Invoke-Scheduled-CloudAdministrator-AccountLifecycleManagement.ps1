@@ -49,6 +49,8 @@
     - AV_CloudAdminTier0_LifecycleDisable, AV_CloudAdminTier1_LifecycleDisable, AV_CloudAdminTier2_LifecycleDisable: Specifies whether to automatically disable Cloud Administrator accounts that have a disabled associated primary user account. Default is false.
     - AV_CloudAdminTier0_LifecycleEnableAfterDisable, AV_CloudAdminTier1_LifecycleEnableAfterDisable, AV_CloudAdminTier2_LifecycleEnableAfterDisable: Specifies whether to automatically enable Cloud Administrator accounts that have been disabled and have an enabled associated primary user account. Default is false.
 
+    Automatic restoration requires the 'Privileged Authentication Administrator' role at tenant scope, which the project template does not assign. Assign it only if you enable one of the 'AV_CloudAdminTier<Tier>_LifecycleRestoreAfterDelete' variables.
+
     In any case, the runbook will log an action plan in the 'accountLifecycle' property of the output object.
     If the action is not performed by the runbook, the status will be set to 'ToBe<action>' and you may follow up manually.
 
@@ -214,11 +216,14 @@ $DirectoryPermissions = ./Common_0003__Confirm-MgDirectoryRoleActiveAssignment.p
         TemplateId       = 'fe930be7-5e62-47db-91af-98c3a49a38b1'
         DirectoryScopeId = '/'
     }
-    @{
-        DisplayName      = 'Privileged Authentication Administrator'
-        TemplateId       = '7be44c8a-adaf-4e2a-84d6-ab2649e08a13'
-        DirectoryScopeId = '/'
-        Justification    = 'Perform sensitive actions: https://learn.microsoft.com/en-us/graph/api/resources/users?view=graph-rest-1.0#who-can-perform-sensitive-actions'
+    if ($LifecycleRestoreAfterDelete.Values -contains $true) {
+        Write-Verbose "[RequiredMicrosoftEntraDirectoryPermissionsValidation]: - Require directory role: Privileged Authentication Administrator, Directory Scope: /"
+        @{
+            DisplayName      = 'Privileged Authentication Administrator'
+            TemplateId       = '7be44c8a-adaf-4e2a-84d6-ab2649e08a13'
+            DirectoryScopeId = '/'
+            Justification    = 'Restore users with privileged administrator roles: https://learn.microsoft.com/en-us/graph/api/directory-deleteditems-restore?view=graph-rest-1.0'
+        }
     }
 
     # Change existing Tier 0 Cloud Admin Accounts
@@ -245,7 +250,7 @@ $DirectoryPermissions = ./Common_0003__Confirm-MgDirectoryRoleActiveAssignment.p
     @{
         DisplayName      = 'Privileged Authentication Administrator'
         TemplateId       = '7be44c8a-adaf-4e2a-84d6-ab2649e08a13'
-        DirectoryScopeId = if ($AccountRestrictedAdminUnitId_Tier1) { "/administrativeUnits/$AccountRestrictedAdminUnitId_Tier1" } else { '/' }
+        DirectoryScopeId = if ($AccountAdminUnitId_Tier1) { "/administrativeUnits/$AccountAdminUnitId_Tier1" } else { '/' }
         Justification    = 'Perform sensitive actions: https://learn.microsoft.com/en-us/graph/api/resources/users?view=graph-rest-1.0#who-can-perform-sensitive-actions'
     }
 
@@ -259,7 +264,7 @@ $DirectoryPermissions = ./Common_0003__Confirm-MgDirectoryRoleActiveAssignment.p
     @{
         DisplayName      = 'Privileged Authentication Administrator'
         TemplateId       = '7be44c8a-adaf-4e2a-84d6-ab2649e08a13'
-        DirectoryScopeId = if ($AccountRestrictedAdminUnitId_Tier2) { "/administrativeUnits/$AccountRestrictedAdminUnitId_Tier2" } else { '/' }
+        DirectoryScopeId = if ($AccountAdminUnitId_Tier2) { "/administrativeUnits/$AccountAdminUnitId_Tier2" } else { '/' }
         Justification    = 'Perform sensitive actions: https://learn.microsoft.com/en-us/graph/api/resources/users?view=graph-rest-1.0#who-can-perform-sensitive-actions'
     }
 )
