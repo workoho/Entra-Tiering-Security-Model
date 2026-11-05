@@ -366,9 +366,9 @@ $return = @{
 
                 Write-Warning "$($_.userPrincipalName) ($($_.Id)): - Soft-Deleted account due to soft-deleted referral account."
                 $_.accountLifecycle = @{
-                    Action = 'SoftDelete'
-                    Status = 'SoftDeleted'
-                    Reason = 'SoftDeletedReferralAccount'
+                    action       = 'SoftDelete'
+                    actionReason = 'SoftDeletedReferralAccount'
+                    status       = 'SoftDeleted'
                 }
                 $_.deletedDateTime = [DateTime]::UtcNow
             }
@@ -433,7 +433,6 @@ $return = @{
         if ($_.referralUserAccount.AccountEnabled -eq $false) {
             if ($_.AccountEnabled -eq $false) {
                 Write-Debug "[SyncAdminAccountStatus]: - Account does not need to be disabled. Skipping."
-                return
             }
             elseif ($LifecycleDisable[$_.securityTierLevel] -eq $true) {
                 Write-Verbose "[SyncAdminAccountStatus]: - $($_.userPrincipalName) - Account is enabled and referral account is disabled. Attempting to disable account."
@@ -487,7 +486,6 @@ $return = @{
         if ($_.referralUserAccount.AccountEnabled -eq $true) {
             if ($_.AccountEnabled -eq $true) {
                 Write-Debug "[SyncAdminAccountStatus]: - Account does not need to be enabled. Skipping."
-                return
             }
             elseif ($LifecycleEnableAfterDisable[$_.securityTierLevel] -eq $true) {
                 Write-Verbose "[SyncAdminAccountStatus]: - $($_.userPrincipalName) - Account is disabled and referral account is enabled. Attempting to enable account."
