@@ -309,7 +309,7 @@ $return = @{
                     Debug       = $false
                 }
                 try {
-                    $null = ./Common_0000__Invoke-MgGraphRequest.ps1 $params
+                    $null = ./Common_0001__Invoke-MgGraphRequest.ps1 $params
                 }
                 catch {
                     [void] $returnError.Add(( ./Common_0000__Write-Error.ps1 @{
@@ -355,7 +355,7 @@ $return = @{
                     Debug       = $false
                 }
                 try {
-                    $null = ./Common_0000__Invoke-MgGraphRequest.ps1 $params
+                    $null = ./Common_0001__Invoke-MgGraphRequest.ps1 $params
                 }
                 catch {
                     [void] $returnError.Add(( ./Common_0000__Write-Error.ps1 @{
@@ -402,7 +402,7 @@ $return = @{
                 Debug       = $false
             }
             try {
-                $null = ./Common_0000__Invoke-MgGraphRequest.ps1 $params
+                $null = ./Common_0001__Invoke-MgGraphRequest.ps1 $params
             }
             catch {
                 [void] $returnError.Add(( ./Common_0000__Write-Error.ps1 @{
@@ -454,7 +454,7 @@ $return = @{
                 }
 
                 try {
-                    $null = ./Common_0000__Invoke-MgGraphRequest.ps1 $params
+                    $null = ./Common_0001__Invoke-MgGraphRequest.ps1 $params
                 }
                 catch {
                     [void] $returnError.Add(( ./Common_0000__Write-Error.ps1 @{
@@ -511,7 +511,7 @@ $return = @{
                 }
 
                 try {
-                    $null = ./Common_0000__Invoke-MgGraphRequest.ps1 $params
+                    $null = ./Common_0001__Invoke-MgGraphRequest.ps1 $params
                 }
                 catch {
                     [void] $returnError.Add(( ./Common_0000__Write-Error.ps1 @{
