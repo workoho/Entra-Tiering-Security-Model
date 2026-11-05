@@ -417,7 +417,7 @@ $return = @{
                 actionReason = 'ExistingReferralAccount'
                 status       = 'Restored'
             }
-            $_.deletedDateTime = [DateTime]::UtcNow
+            $_.deletedDateTime = $null
         }
         else {
             Write-Warning "$($_.userPrincipalName) ($($_.Id)): - Account has existing referral account and should be restored, but no automatic restore is performed."
@@ -430,7 +430,7 @@ $return = @{
         #endregion
 
         #region Disable account
-        if ($_.referralUserAccount.AccountEnabled -eq $false) {
+        if ($null -eq $_.deletedDateTime -and $_.referralUserAccount.AccountEnabled -eq $false) {
             if ($_.AccountEnabled -eq $false) {
                 Write-Debug "[SyncAdminAccountStatus]: - Account does not need to be disabled. Skipping."
             }
@@ -483,7 +483,11 @@ $return = @{
         #endregion
 
         #region Enable account
-        if ($_.referralUserAccount.AccountEnabled -eq $true) {
+        if (
+            $null -eq $_.deletedDateTime -and
+            -not $_.referralUserAccount.deletedDateTime -and
+            $_.referralUserAccount.AccountEnabled -eq $true
+        ) {
             if ($_.AccountEnabled -eq $true) {
                 Write-Debug "[SyncAdminAccountStatus]: - Account does not need to be enabled. Skipping."
             }
