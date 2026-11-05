@@ -342,6 +342,13 @@ $return = @{
             }
             elseif ($LifecycleDelete[$_.securityTierLevel] -eq $true) {
                 Write-Verbose "[SyncAdminAccountStatus]: - Account should be soft-deleted to match referral account status. Attempting to soft-delete account."
+                $params = @{
+                    Method      = 'DELETE'
+                    Uri         = "/v1.0/users/$($_.Id)"
+                    ErrorAction = 'Stop'
+                    Verbose     = $false
+                    Debug       = $false
+                }
                 try {
                     $null = ./Common_0000__Invoke-MgGraphRequest.ps1 $params
                 }
