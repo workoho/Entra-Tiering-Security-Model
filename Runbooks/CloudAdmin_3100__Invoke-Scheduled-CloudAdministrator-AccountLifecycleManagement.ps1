@@ -279,6 +279,8 @@ $return = @{
 #region Perform lifecycle management to cloud admin accounts -------------------
 ./CloudAdmin_0000__Common_0001__Get-CloudAdminAccountsByPrimaryAccount.ps1 -ReferralUserId $ReferralUserId -Tier $Tier -ExpandReferralUserId $true -ErrorAction Stop | & {
     process {
+        $account = $_   # In a catch block, $_ is the error record
+
         if ($null -eq $_.securityTierLevel -or [string]::IsNullOrEmpty($_.securityTierLevel)) {
             Write-Warning "$($_.userPrincipalName) ($($_.Id)): - Account has no security tier level. Skipping."
             return
@@ -313,12 +315,12 @@ $return = @{
                 }
                 catch {
                     [void] $returnError.Add(( ./Common_0000__Write-Error.ps1 @{
-                                Message           = "Failed to delete account $($_.userPrincipalName) ($($_.Id))."
+                                Message           = "Failed to delete account $($account.userPrincipalName) ($($account.Id))."
                                 ErrorId           = '500'
                                 Category          = 'InvalidOperation'
                                 RecommendedAction = 'Check the account and its referral account.'
                                 CategoryActivity  = 'Account Status Sync'
-                                CategoryReason    = "Failed to delete account $($_.userPrincipalName) ($($_.Id))."
+                                CategoryReason    = "Failed to delete account $($account.userPrincipalName) ($($account.Id))."
                             }))
                     return
                 }
@@ -359,12 +361,12 @@ $return = @{
                 }
                 catch {
                     [void] $returnError.Add(( ./Common_0000__Write-Error.ps1 @{
-                                Message           = "Failed to delete account $($_.userPrincipalName) ($($_.Id))."
+                                Message           = "Failed to delete account $($account.userPrincipalName) ($($account.Id))."
                                 ErrorId           = '500'
                                 Category          = 'InvalidOperation'
                                 RecommendedAction = 'Check the account and its referral account.'
                                 CategoryActivity  = 'Account Status Sync'
-                                CategoryReason    = "Failed to delete account $($_.userPrincipalName) ($($_.Id))."
+                                CategoryReason    = "Failed to delete account $($account.userPrincipalName) ($($account.Id))."
                             }))
                     return
                 }
@@ -406,12 +408,12 @@ $return = @{
             }
             catch {
                 [void] $returnError.Add(( ./Common_0000__Write-Error.ps1 @{
-                            Message           = "Failed to restore account $($_.userPrincipalName) ($($_.Id))."
+                            Message           = "Failed to restore account $($account.userPrincipalName) ($($account.Id))."
                             ErrorId           = '500'
                             Category          = 'InvalidOperation'
                             RecommendedAction = 'Check the account and its referral account.'
                             CategoryActivity  = 'Account Status Sync'
-                            CategoryReason    = "Failed to restore account $($_.userPrincipalName) ($($_.Id))."
+                            CategoryReason    = "Failed to restore account $($account.userPrincipalName) ($($account.Id))."
                         }))
                 return
             }
@@ -458,12 +460,12 @@ $return = @{
                 }
                 catch {
                     [void] $returnError.Add(( ./Common_0000__Write-Error.ps1 @{
-                                Message           = "Failed to disable account $($_.userPrincipalName) ($($_.Id)) to match referral account."
+                                Message           = "Failed to disable account $($account.userPrincipalName) ($($account.Id)) to match referral account."
                                 ErrorId           = '500'
                                 Category          = 'InvalidOperation'
                                 RecommendedAction = 'Check the account and its referral account.'
                                 CategoryActivity  = 'Account Status Sync'
-                                CategoryReason    = "Failed to disable account $($_.userPrincipalName) ($($_.Id)) to match referral account."
+                                CategoryReason    = "Failed to disable account $($account.userPrincipalName) ($($account.Id)) to match referral account."
                             }))
                     return
                 }
@@ -515,12 +517,12 @@ $return = @{
                 }
                 catch {
                     [void] $returnError.Add(( ./Common_0000__Write-Error.ps1 @{
-                                Message           = "Failed to enable account $($_.userPrincipalName) ($($_.Id)) to match referral account."
+                                Message           = "Failed to enable account $($account.userPrincipalName) ($($account.Id)) to match referral account."
                                 ErrorId           = '500'
                                 Category          = 'InvalidOperation'
                                 RecommendedAction = 'Check the account and its referral account.'
                                 CategoryActivity  = 'Account Status Sync'
-                                CategoryReason    = "Failed to enable account $($_.userPrincipalName) ($($_.Id)) to match referral account."
+                                CategoryReason    = "Failed to enable account $($account.userPrincipalName) ($($account.Id)) to match referral account."
                             }))
                     return
                 }
