@@ -37,17 +37,17 @@
 
     Please note that special procedures might be required for early deletion of Cloud Administrator accounts, for example, for cloud admin accounts that are no longer needed, but the primary user account is still active.
     In such cases, the Cloud Administrator account must be permanently deleted from Microsoft Entra, including to remove the account from the Entra ID recycle bin. Otherwise, the cloud admin account will be restored automatically.
-    Alternatively, you may set the 'LifecycleRestoreAfterDelete_Tier0', 'LifecycleRestoreAfterDelete_Tier1', or 'LifecycleRestoreAfterDelete_Tier2' variable to false to prevent automatic restoration of the cloud admin account.
+    Alternatively, you may set the 'AV_CloudAdminTier0_LifecycleRestoreAfterDelete', 'AV_CloudAdminTier1_LifecycleRestoreAfterDelete', or 'AV_CloudAdminTier2_LifecycleRestoreAfterDelete' variable to false to prevent automatic restoration of the cloud admin account.
 
     PLease note that for security reasons, it is highly recommended to keep the automatic restoration of Cloud Administrator accounts disabled. Once a Cloud Administrator account is deleted, it should not be restored anymore and better be re-created with blank permission history if needed.
     This is to prevent any hidden security risks that may arise from the restoration of prior permissions and access rights that might not be needed anymore, or that might have been granted to unauthorized users.
     You may decide to restore a Cloud Administrator account manually if needed, but this should be a conscious decision and not an automatic process.
 
     To control automatic lifecycle management, the runbook uses the following Azure Automation variables for configuration:
-    - LifecycleDelete_Tier0, LifecycleDelete_Tier1, LifecycleDelete_Tier2: Specifies whether to automatically soft-delete Cloud Administrator accounts that have no associated primary user account. Default is false.
-    - LifecycleRestoreAfterDelete_Tier0, LifecycleRestoreAfterDelete_Tier1, LifecycleRestoreAfterDelete_Tier2: Specifies whether to automatically restore Cloud Administrator accounts that have been soft-deleted and have an associated primary user account. Default is false.
-    - LifecycleDisable_Tier0, LifecycleDisable_Tier1, LifecycleDisable_Tier2: Specifies whether to automatically disable Cloud Administrator accounts that have a disabled associated primary user account. Default is false.
-    - LifecycleEnableAfterDisable_Tier0, LifecycleEnableAfterDisable_Tier1, LifecycleEnableAfterDisable_Tier2: Specifies whether to automatically enable Cloud Administrator accounts that have been disabled and have an enabled associated primary user account. Default is false.
+    - AV_CloudAdminTier0_LifecycleDelete, AV_CloudAdminTier1_LifecycleDelete, AV_CloudAdminTier2_LifecycleDelete: Specifies whether to automatically soft-delete Cloud Administrator accounts that have no associated primary user account. Default is false.
+    - AV_CloudAdminTier0_LifecycleRestoreAfterDelete, AV_CloudAdminTier1_LifecycleRestoreAfterDelete, AV_CloudAdminTier2_LifecycleRestoreAfterDelete: Specifies whether to automatically restore Cloud Administrator accounts that have been soft-deleted and have an associated primary user account. Default is false.
+    - AV_CloudAdminTier0_LifecycleDisable, AV_CloudAdminTier1_LifecycleDisable, AV_CloudAdminTier2_LifecycleDisable: Specifies whether to automatically disable Cloud Administrator accounts that have a disabled associated primary user account. Default is false.
+    - AV_CloudAdminTier0_LifecycleEnableAfterDisable, AV_CloudAdminTier1_LifecycleEnableAfterDisable, AV_CloudAdminTier2_LifecycleEnableAfterDisable: Specifies whether to automatically enable Cloud Administrator accounts that have been disabled and have an enabled associated primary user account. Default is false.
 
     In any case, the runbook will log an action plan in the 'accountLifecycle' property of the output object.
     If the action is not performed by the runbook, the status will be set to 'ToBe<action>' and you may follow up manually.
