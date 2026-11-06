@@ -31,6 +31,8 @@
     - Disables Cloud Administrator accounts that have an associated primary user account that is disabled.
     - Re-enables Cloud Administrator accounts that have been disabled and have an associated primary user account that is enabled.
 
+    A restored account is disabled or re-enabled in the next run, not in the run that restored it.
+
     The runbook can be executed in the following modes:
     - Single mode: The runbook processes a single Cloud Administrator account.
     - Batch mode: The runbook processes multiple Cloud Administrator accounts in a single run.
@@ -44,7 +46,7 @@
     You may decide to restore a Cloud Administrator account manually if needed, but this should be a conscious decision and not an automatic process.
 
     To control automatic lifecycle management, the runbook uses the following Azure Automation variables for configuration:
-    - AV_CloudAdminTier0_LifecycleDelete, AV_CloudAdminTier1_LifecycleDelete, AV_CloudAdminTier2_LifecycleDelete: Specifies whether to automatically soft-delete Cloud Administrator accounts that have no associated primary user account. Default is false.
+    - AV_CloudAdminTier0_LifecycleDelete, AV_CloudAdminTier1_LifecycleDelete, AV_CloudAdminTier2_LifecycleDelete: Specifies whether to automatically soft-delete Cloud Administrator accounts that have no associated primary user account, or a soft-deleted one. Default is false.
     - AV_CloudAdminTier0_LifecycleRestoreAfterDelete, AV_CloudAdminTier1_LifecycleRestoreAfterDelete, AV_CloudAdminTier2_LifecycleRestoreAfterDelete: Specifies whether to automatically restore Cloud Administrator accounts that have been soft-deleted and have an associated primary user account. Default is false.
     - AV_CloudAdminTier0_LifecycleDisable, AV_CloudAdminTier1_LifecycleDisable, AV_CloudAdminTier2_LifecycleDisable: Specifies whether to automatically disable Cloud Administrator accounts that have a disabled associated primary user account. Default is false.
     - AV_CloudAdminTier0_LifecycleEnableAfterDisable, AV_CloudAdminTier1_LifecycleEnableAfterDisable, AV_CloudAdminTier2_LifecycleEnableAfterDisable: Specifies whether to automatically enable Cloud Administrator accounts that have been disabled and have an enabled associated primary user account. Default is false.
@@ -397,13 +399,15 @@ $return = @{
             Write-Verbose "[SyncAdminAccountStatus]: - Account should be restored to match referral account status. Attempting to restore account."
             $params = @{
                 Method      = 'POST'
-                Uri         = "/v1.0/directory/deletedItems/microsoft.graph.user/$($_.Id)/restore"
+                Uri         = "/v1.0/directory/deletedItems/$($_.Id)/restore"
                 ErrorAction = 'Stop'
                 Verbose     = $false
                 Debug       = $false
             }
             try {
-                $null = ./Common_0001__Invoke-MgGraphRequest.ps1 $params
+                # The request runbook returns nothing on 404 instead of throwing. A successful restore returns the user.
+                $response = ./Common_0001__Invoke-MgGraphRequest.ps1 $params
+                if ($null -eq $response) { Throw 'Deleted user not found.' }
             }
             catch {
                 [void] $returnError.Add(( ./Common_0000__Write-Error.ps1 @{
@@ -436,7 +440,12 @@ $return = @{
         #endregion
 
         #region Disable account
-        if ($null -eq $_.deletedDateTime -and $_.referralUserAccount.AccountEnabled -eq $false) {
+        # A restored account gets these steps in the next run, when the directory is sure to serve it.
+        if (
+            $null -eq $_.deletedDateTime -and
+            $_.accountLifecycle.action -ne 'Restore' -and
+            $_.referralUserAccount.AccountEnabled -eq $false
+        ) {
             if ($_.AccountEnabled -eq $false) {
                 Write-Debug "[SyncAdminAccountStatus]: - Account does not need to be disabled. Skipping."
             }
@@ -466,6 +475,8 @@ $return = @{
                                 CategoryActivity  = 'Account Status Sync'
                                 CategoryReason    = "Failed to disable account $($account.userPrincipalName) ($($account.Id)) to match referral account."
                             }))
+                    # Keep a pending soft-delete in the output.
+                    if ($null -ne $account.accountLifecycle) { [void] $returnOutput.Add($account) }
                     return
                 }
 
@@ -479,10 +490,13 @@ $return = @{
             }
             else {
                 Write-Warning "$($_.userPrincipalName) ($($_.Id)): - Account is enabled and referral account is disabled, but no automatic disabling is performed."
-                $_.accountLifecycle = @{
-                    action       = 'DeferredDisable'
-                    actionReason = 'DisabledReferralAccount'
-                    status       = 'ToBeDisabled'
+                # A pending soft-delete stays in the output.
+                if ($null -eq $_.accountLifecycle) {
+                    $_.accountLifecycle = @{
+                        action       = 'DeferredDisable'
+                        actionReason = 'DisabledReferralAccount'
+                        status       = 'ToBeDisabled'
+                    }
                 }
             }
         }
@@ -491,6 +505,7 @@ $return = @{
         #region Enable account
         if (
             $null -eq $_.deletedDateTime -and
+            $_.accountLifecycle.action -ne 'Restore' -and
             -not $_.referralUserAccount.deletedDateTime -and
             $_.referralUserAccount.AccountEnabled -eq $true
         ) {
