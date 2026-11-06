@@ -345,7 +345,6 @@ $return = @{
         elseif ($_.referralUserAccount.deletedDateTime) {
             if ($null -ne $_.deletedDateTime) {
                 Write-Debug "[SyncAdminAccountStatus]: - Account is already soft-deleted. Skipping."
-                return
             }
             elseif ($LifecycleDelete[$_.securityTierLevel] -eq $true) {
                 Write-Verbose "[SyncAdminAccountStatus]: - Account should be soft-deleted to match referral account status. Attempting to soft-delete account."
