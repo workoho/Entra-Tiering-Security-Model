@@ -52,24 +52,8 @@ jobs:
           ref: ${{ steps.framework.outputs.ref }}
           path: framework
 
-      - name: Install Pester
-        shell: ${{ matrix.shell }}
-        run: |
-          if ($PSVersionTable.PSEdition -eq 'Desktop') {
-            [Net.ServicePointManager]::SecurityProtocol = [Net.ServicePointManager]::SecurityProtocol -bor [Net.SecurityProtocolType]::Tls12
-            Install-PackageProvider -Name NuGet -MinimumVersion 2.8.5.201 -Scope CurrentUser -Force | Out-Null
-          }
-          Install-Module -Name Pester -RequiredVersion $env:PESTER_VERSION -Scope CurrentUser -Force -SkipPublisherCheck
-
       - name: Run tests
-        shell: ${{ matrix.shell }}
         env:
           AZAUTO_FW_RUNBOOKS: ${{ github.workspace }}\framework\Runbooks
-        run: |
-          Import-Module -Name Pester -RequiredVersion $env:PESTER_VERSION
-          "PowerShell $($PSVersionTable.PSVersion) ($($PSVersionTable.PSEdition))"
-          $config = New-PesterConfiguration
-          $config.Run.Path = 'Tests'
-          $config.Run.Exit = $true
-          $config.Output.Verbosity = 'Detailed'
-          Invoke-Pester -Configuration $config
+        # GitHub does not evaluate expressions in shell:, so the shell is started as a program.
+        run: ${{ matrix.shell }} -NoProfile -NonInteractive -File Tests/Invoke-Tests.ps1 -PesterVersion ${{ env.PESTER_VERSION }}
