@@ -1,0 +1,75 @@
+name: Tests
+
+on:
+  pull_request:
+  push:
+    branches:
+      - main
+
+permissions:
+  contents: read
+
+env:
+  PESTER_VERSION: 5.8.0
+
+jobs:
+  pester:
+    name: Pester on ${{ matrix.shell }}, framework ${{ matrix.framework }}
+    runs-on: windows-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        # powershell is Windows PowerShell 5.1, the runtime of the runbooks in Azure Automation.
+        shell: [powershell, pwsh]
+        # release is what projects pull with GitReference 'LatestRelease'; main shows a coming break early.
+        framework: [release, main]
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      # Picks the latest release tag the way Update-AzAutoFWProject.ps1 does for GitReference 'LatestRelease'.
+      - name: Resolve framework version
+        id: framework
+        shell: pwsh
+        run: |
+          $ref = if ('${{ matrix.framework }}' -eq 'release') {
+            git ls-remote --tags --refs https://github.com/workoho/AzAuto-Common-Runbook-FW.git |
+              ForEach-Object { ($_ -split 'refs/tags/')[1] } |
+              Where-Object { $_ -match '^v\d+(\.\d+(\.\d+)?)?$' } |
+              Sort-Object { [Version]($_ -replace '^v') } |
+              Select-Object -Last 1
+          }
+          else { 'main' }
+          if (-not $ref) { throw 'No framework release tag found.' }
+          "Framework: $ref"
+          "ref=$ref" >> $env:GITHUB_OUTPUT
+
+      - name: Checkout framework
+        uses: actions/checkout@v4
+        with:
+          repository: workoho/AzAuto-Common-Runbook-FW
+          ref: ${{ steps.framework.outputs.ref }}
+          path: framework
+
+      - name: Install Pester
+        shell: ${{ matrix.shell }}
+        run: |
+          if ($PSVersionTable.PSEdition -eq 'Desktop') {
+            [Net.ServicePointManager]::SecurityProtocol = [Net.ServicePointManager]::SecurityProtocol -bor [Net.SecurityProtocolType]::Tls12
+            Install-PackageProvider -Name NuGet -MinimumVersion 2.8.5.201 -Scope CurrentUser -Force | Out-Null
+          }
+          Install-Module -Name Pester -RequiredVersion $env:PESTER_VERSION -Scope CurrentUser -Force -SkipPublisherCheck
+
+      - name: Run tests
+        shell: ${{ matrix.shell }}
+        env:
+          AZAUTO_FW_RUNBOOKS: ${{ github.workspace }}\framework\Runbooks
+        run: |
+          Import-Module -Name Pester -RequiredVersion $env:PESTER_VERSION
+          "PowerShell $($PSVersionTable.PSVersion) ($($PSVersionTable.PSEdition))"
+          $config = New-PesterConfiguration
+          $config.Run.Path = 'Tests'
+          $config.Run.Exit = $true
+          $config.Output.Verbosity = 'Detailed'
+          Invoke-Pester -Configuration $config
