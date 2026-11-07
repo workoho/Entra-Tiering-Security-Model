@@ -2652,19 +2652,19 @@ Function ProcessReferralUser ($ReferralUserId, $LocalUserId, $Tier, $UserPhotoUr
 
     #region Disable Mailbox Access -------------------------------------------------
     $params = @{
-        Identity                = $userExObj.identity
-        ActiveSyncEnabled       = $false
-        ImapEnabled             = $false
-        MacOutlookEnabled       = $false
-        OneWinNativeOutlook     = $false
-        OutlookMobileEnabled    = $false
-        OWAEnabled              = $false
-        OWAforDevicesEnabled    = $false
-        PopEnabled              = $false
-        UniversalOutlookEnabled = $false
-        WarningAction           = 'SilentlyContinue'
-        ErrorAction             = 'Stop'
-        Verbose                 = $false
+        Identity                   = $userExObj.identity
+        ActiveSyncEnabled          = $false
+        ImapEnabled                = $false
+        MacOutlookEnabled          = $false
+        OneWinNativeOutlookEnabled = $false
+        OutlookMobileEnabled       = $false
+        OWAEnabled                 = $false
+        OWAforDevicesEnabled       = $false
+        PopEnabled                 = $false
+        UniversalOutlookEnabled    = $false
+        WarningAction              = 'SilentlyContinue'
+        ErrorAction                = 'Stop'
+        Verbose                    = $false
     }
     $nonEwsServicePlans = 'EXCHANGE_S_DESKLESS', 'EXCHANGE_S_FOUNDATION'
     try {
