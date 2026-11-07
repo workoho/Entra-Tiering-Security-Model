@@ -57,3 +57,14 @@ jobs:
           AZAUTO_FW_RUNBOOKS: ${{ github.workspace }}\framework\Runbooks
         # GitHub does not evaluate expressions in shell:, so the shell is started as a program.
         run: ${{ matrix.shell }} -NoProfile -NonInteractive -File Tests/Invoke-Tests.ps1 -PesterVersion ${{ env.PESTER_VERSION }}
+
+  compatibility:
+    name: Windows PowerShell 5.1 compatibility
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Check the runbooks against Windows PowerShell 5.1
+        shell: pwsh
+        run: ./Tests/Test-Compatibility.ps1
