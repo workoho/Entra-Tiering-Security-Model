@@ -2573,7 +2573,7 @@ Function ProcessReferralUser ($ReferralUserId, $LocalUserId, $Tier, $UserPhotoUr
 
     $userExObj = $null
     do {
-        $userExObj = Get-EXOMailbox -ExternalDirectoryObjectId $UserObj.id -ErrorAction SilentlyContinue -Verbose:$false
+        $userExObj = Get-EXOMailbox -ExternalDirectoryObjectId $UserObj.id -ErrorAction SilentlyContinue -ErrorVariable getMailboxError -Verbose:$false
         if ($null -ne $userExObj) {
             Write-Verbose "[ProcessReferralUserDedicatedAccountExchangeMailbox]: - OK: Detected mailbox provisioning completion."
             $DoLoop = $false
@@ -2585,7 +2585,7 @@ Function ProcessReferralUser ($ReferralUserId, $LocalUserId, $Tier, $UserPhotoUr
             $DoLoop = $false
 
             [void] $script:returnError.Add(( ./Common_0000__Write-Error.ps1 @{
-                        Message           = "${ReferralUserId}: Mailbox provisioning timeout for $($UserObj.userPrincipalName)."
+                        Message           = "${ReferralUserId}: Mailbox provisioning timeout for $($UserObj.userPrincipalName).$(if ($getMailboxError) { " Last error: $($getMailboxError[-1].Exception.Message)" })"
                         ErrorId           = '504'
                         Category          = 'OperationTimeout'
                         TargetName        = $refUserObj.userPrincipalName
