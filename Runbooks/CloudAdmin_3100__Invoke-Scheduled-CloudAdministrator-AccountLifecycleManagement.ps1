@@ -32,6 +32,7 @@
     - Re-enables Cloud Administrator accounts that have been disabled and have an associated primary user account that is enabled.
 
     A restored account is disabled or re-enabled in the next run, not in the run that restored it.
+    An account whose reference to its primary user account is not an object ID is left unchanged and reported with the status 'ToBeReviewed'.
 
     The runbook can be executed in the following modes:
     - Single mode: The runbook processes a single Cloud Administrator account.
@@ -303,6 +304,20 @@ $invokeOnExistingUser = {
         }
 
         Write-Verbose "[SyncAdminAccountStatus]: - Processing account: $($_.userPrincipalName) ($($_.Id)) with security tier level $($_.securityTierLevel)"
+
+        if (
+            -not [string]::IsNullOrEmpty($_.referralUserAccount.id) -and
+            $_.referralUserAccount.id -notmatch '^[a-fA-F0-9]{8}-[a-fA-F0-9]{4}-[a-fA-F0-9]{4}-[a-fA-F0-9]{4}-[a-fA-F0-9]{12}$'
+        ) {
+            Write-Warning "$($_.userPrincipalName) ($($_.Id)): - Reference to the referral account is not an object ID: $($_.referralUserAccount.id). Check the account manually."
+            $_.accountLifecycle = @{
+                action       = 'None'
+                actionReason = 'InvalidReferralAccountId'
+                status       = 'ToBeReviewed'
+            }
+            [void] $returnOutput.Add($_)
+            return
+        }
 
         #region Delete account
         if (
