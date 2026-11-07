@@ -279,6 +279,20 @@ $return = @{
 #endregion ---------------------------------------------------------------------
 
 #region Perform lifecycle management to cloud admin accounts -------------------
+# The request runbook returns nothing on 404 instead of throwing, and DELETE and PATCH return nothing on success too.
+# Reading the user before such a request keeps a missing user from being reported as changed.
+$invokeOnExistingUser = {
+    param($Params)
+    $user = ./Common_0001__Invoke-MgGraphRequest.ps1 @{
+        Uri         = "$($Params.Uri)?`$select=id"
+        ErrorAction = 'Stop'
+        Verbose     = $false
+        Debug       = $false
+    }
+    if ($null -eq $user) { Throw "User not found: $($Params.Uri)" }
+    $null = ./Common_0001__Invoke-MgGraphRequest.ps1 $Params
+}
+
 ./CloudAdmin_0000__Common_0001__Get-CloudAdminAccountsByPrimaryAccount.ps1 -ReferralUserId $ReferralUserId -Tier $Tier -ExpandReferralUserId $true -ErrorAction Stop | & {
     process {
         $account = $_   # In a catch block, $_ is the error record
@@ -313,7 +327,7 @@ $return = @{
                     Debug       = $false
                 }
                 try {
-                    $null = ./Common_0001__Invoke-MgGraphRequest.ps1 $params
+                    & $invokeOnExistingUser $params
                 }
                 catch {
                     [void] $returnError.Add(( ./Common_0000__Write-Error.ps1 @{
@@ -358,7 +372,7 @@ $return = @{
                     Debug       = $false
                 }
                 try {
-                    $null = ./Common_0001__Invoke-MgGraphRequest.ps1 $params
+                    & $invokeOnExistingUser $params
                 }
                 catch {
                     [void] $returnError.Add(( ./Common_0000__Write-Error.ps1 @{
@@ -464,7 +478,7 @@ $return = @{
                 }
 
                 try {
-                    $null = ./Common_0001__Invoke-MgGraphRequest.ps1 $params
+                    & $invokeOnExistingUser $params
                 }
                 catch {
                     [void] $returnError.Add(( ./Common_0000__Write-Error.ps1 @{
@@ -527,7 +541,7 @@ $return = @{
                 }
 
                 try {
-                    $null = ./Common_0001__Invoke-MgGraphRequest.ps1 $params
+                    & $invokeOnExistingUser $params
                 }
                 catch {
                     [void] $returnError.Add(( ./Common_0000__Write-Error.ps1 @{
