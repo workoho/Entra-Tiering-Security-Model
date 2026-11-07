@@ -728,30 +728,19 @@ if (
 #endregion ---------------------------------------------------------------------
 
 #region [COMMON] OPEN CONNECTIONS: Exchange Online -----------------------------
-./Common_0003__Confirm-MgAppPermission.ps1 -Permissions @( #TODO child runbook doesnt actually work
+./Common_0003__Confirm-MgAppPermission.ps1 -Permissions @(
     @{
         DisplayName = 'Office 365 Exchange Online'
         AppId       = '00000002-0000-0ff1-ce00-000000000000'
         AppRoles    = @(
             'Exchange.ManageAsApp'
         )
-        # Oauth2PermissionScopes = @{
-        #     Admin = @(
-        #     )
-        #     '<User-ObjectId>' = @(
-        #     )
-        # }
     }
 ) 1> $null
 
-./Common_0001__Connect-ExchangeOnline.ps1 -Organization $tenantDomain.Name -CommandName Get-EXOMailbox, Get-Mailbox, Set-Mailbox, Set-CASMailbox
-#endregion ---------------------------------------------------------------------
-
-#region Required Exchange Online Permissions Validation -----------------------
-# Exchange Online offers a cmdlet parameter only to an identity whose roles cover it, so a missing permission
-# shows up as a missing parameter. Check them before an account is created, instead of failing halfway.
-# EwsEnabled and MAPIEnabled are left out, because they are set only for some licenses.
-$missingExchangeParameters = @(
+# The Exchange Online cmdlets this runbook uses, with every parameter it passes to them.
+# Keep this list in sync with the calls in ProcessReferralUser.
+$requiredExchangeParameters = @(
     @{
         CommandName = 'Get-EXOMailbox'
         Parameters  = 'ExternalDirectoryObjectId'
@@ -766,9 +755,17 @@ $missingExchangeParameters = @(
     }
     @{
         CommandName = 'Set-CASMailbox'
-        Parameters  = 'Identity', 'ActiveSyncEnabled', 'ImapEnabled', 'MacOutlookEnabled', 'OneWinNativeOutlookEnabled', 'OutlookMobileEnabled', 'OWAEnabled', 'OWAforDevicesEnabled', 'PopEnabled', 'UniversalOutlookEnabled'
+        Parameters  = 'Identity', 'ActiveSyncEnabled', 'ImapEnabled', 'MacOutlookEnabled', 'OneWinNativeOutlookEnabled', 'OutlookMobileEnabled', 'OWAEnabled', 'OWAforDevicesEnabled', 'PopEnabled', 'UniversalOutlookEnabled', 'EwsEnabled', 'MAPIEnabled'
     }
-) | & {
+)
+
+./Common_0001__Connect-ExchangeOnline.ps1 -Organization $tenantDomain.Name -CommandName @($requiredExchangeParameters | & { process { $_.CommandName } })
+#endregion ---------------------------------------------------------------------
+
+#region Required Exchange Online Permissions Validation -----------------------
+# Exchange Online offers a cmdlet parameter only to an identity whose roles cover it, so a missing permission
+# shows up as a missing parameter. Check them before an account is created, instead of failing halfway.
+$missingExchangeParameters = $requiredExchangeParameters | & {
     process {
         $command = Get-Command -Name $_.CommandName -ErrorAction SilentlyContinue
         if ($null -eq $command) {
@@ -781,7 +778,7 @@ $missingExchangeParameters = @(
     }
 }
 if ($missingExchangeParameters) {
-    Throw "[RequiredExchangeOnlinePermissionsValidation]: - Exchange Online does not offer the following to this identity: $($missingExchangeParameters -join ', '). Its Exchange Online permissions are missing or too narrow. The project template assigns the Microsoft Entra role 'Exchange Recipient Administrator' to the managed identity. Check that assignment, and that Exchange Online granted the role to the identity, then run the runbook again."
+    Throw "[RequiredExchangeOnlinePermissionsValidation]: - Exchange Online does not offer the following to this identity: $($missingExchangeParameters -join ', '). Exchange Online has not granted the identity its role yet, or grants it only in part. The project template assigns the Microsoft Entra role 'Exchange Recipient Administrator' for this."
 }
 #endregion ---------------------------------------------------------------------
 
@@ -2666,6 +2663,7 @@ Function ProcessReferralUser ($ReferralUserId, $LocalUserId, $Tier, $UserPhotoUr
         Write-Warning "$($UserObj.userPrincipalName): External e-mail forwarding to $($params.ForwardingSmtpAddress)"
     }
 
+    # Every parameter here is also listed in $requiredExchangeParameters.
     try {
         Set-Mailbox @params 1> $null
         Write-Verbose "[ProcessReferralUserDedicatedAccountExchangeMailbox]: - OK: Set e-mail forwarding."
@@ -2704,6 +2702,7 @@ Function ProcessReferralUser ($ReferralUserId, $LocalUserId, $Tier, $UserPhotoUr
         ErrorAction                = 'Stop'
         Verbose                    = $false
     }
+    # Every parameter here is also listed in $requiredExchangeParameters.
     $nonEwsServicePlans = 'EXCHANGE_S_DESKLESS', 'EXCHANGE_S_FOUNDATION'
     try {
         if (
