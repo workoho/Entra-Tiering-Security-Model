@@ -646,10 +646,10 @@ if (
             if (-Not (
                     $DirectoryPermissions | Where-Object {
                         # Privileged Role Administrator
-                        $_.TemplateId -eq 'e8611ab8-c189-46e8-94e1-60213ab1f814' -or
+                        $_.RoleDefinition.TemplateId -eq 'e8611ab8-c189-46e8-94e1-60213ab1f814' -or
 
                         # Global Administrator
-                        $_.TemplateId -eq '62e90394-69f5-4237-9190-012177145e10'
+                        $_.RoleDefinition.TemplateId -eq '62e90394-69f5-4237-9190-012177145e10'
                     }
                 )
             ) {
