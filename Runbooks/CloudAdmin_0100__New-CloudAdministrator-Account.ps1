@@ -747,6 +747,44 @@ if (
 ./Common_0001__Connect-ExchangeOnline.ps1 -Organization $tenantDomain.Name -CommandName Get-EXOMailbox, Get-Mailbox, Set-Mailbox, Set-CASMailbox
 #endregion ---------------------------------------------------------------------
 
+#region Required Exchange Online Permissions Validation -----------------------
+# Exchange Online offers a cmdlet parameter only to an identity whose roles cover it, so a missing permission
+# shows up as a missing parameter. Check them before an account is created, instead of failing halfway.
+# EwsEnabled and MAPIEnabled are left out, because they are set only for some licenses.
+$missingExchangeParameters = @(
+    @{
+        CommandName = 'Get-EXOMailbox'
+        Parameters  = 'ExternalDirectoryObjectId'
+    }
+    @{
+        CommandName = 'Get-Mailbox'
+        Parameters  = 'Identity'
+    }
+    @{
+        CommandName = 'Set-Mailbox'
+        Parameters  = 'Identity', 'ForwardingAddress', 'ForwardingSmtpAddress', 'DeliverToMailboxAndForward', 'HiddenFromAddressListsEnabled'
+    }
+    @{
+        CommandName = 'Set-CASMailbox'
+        Parameters  = 'Identity', 'ActiveSyncEnabled', 'ImapEnabled', 'MacOutlookEnabled', 'OneWinNativeOutlookEnabled', 'OutlookMobileEnabled', 'OWAEnabled', 'OWAforDevicesEnabled', 'PopEnabled', 'UniversalOutlookEnabled'
+    }
+) | & {
+    process {
+        $command = Get-Command -Name $_.CommandName -ErrorAction SilentlyContinue
+        if ($null -eq $command) {
+            "$($_.CommandName) (whole cmdlet)"
+            return
+        }
+        foreach ($parameter in $_.Parameters) {
+            if (-not $command.Parameters.ContainsKey($parameter)) { "$($_.CommandName) -$parameter" }
+        }
+    }
+}
+if ($missingExchangeParameters) {
+    Throw "[RequiredExchangeOnlinePermissionsValidation]: - Exchange Online does not offer the following to this identity: $($missingExchangeParameters -join ', '). Its Exchange Online permissions are missing or too narrow. The project template assigns the Microsoft Entra role 'Exchange Recipient Administrator' to the managed identity. Check that assignment, and that Exchange Online granted the role to the identity, then run the runbook again."
+}
+#endregion ---------------------------------------------------------------------
+
 #region Process Referral User --------------------------------------------------
 Function ProcessReferralUser ($ReferralUserId, $LocalUserId, $Tier, $UserPhotoUrl, $RequestDedicatedAccount) {
     Write-Verbose "[ProcessReferralUser]: -----STARTLOOP $ReferralUserId, Tier $Tier ---"
