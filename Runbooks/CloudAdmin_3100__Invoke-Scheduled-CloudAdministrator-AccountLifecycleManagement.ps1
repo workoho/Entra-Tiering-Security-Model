@@ -56,6 +56,7 @@
 
     In any case, the runbook will log an action plan in the 'accountLifecycle' property of the output object.
     If the action is not performed by the runbook, the status will be set to 'ToBe<action>' and you may follow up manually.
+    The status 'DisabledToBeSoftDeleted' means the account was disabled, and the soft-delete is still to be done.
 
     Using the -OutCsv parameter, the runbook can store the output in an Azure Blob Storage container or Azure File Share. That way, you can keep a record of the lifecycle management actions performed by the runbook.
     The CSV file can be used for auditing purposes or to track the lifecycle management of Cloud Administrator accounts over time.
@@ -514,7 +515,8 @@ $invokeOnExistingUser = {
                 $_.accountLifecycle = @{
                     action       = 'Disable'
                     actionReason = 'DisabledReferralAccount'
-                    status       = 'Disabled'
+                    # A pending soft-delete stays visible in the status.
+                    status       = if ($_.accountLifecycle.status -eq 'ToBeSoftDeleted') { 'DisabledToBeSoftDeleted' } else { 'Disabled' }
                 }
             }
             else {
