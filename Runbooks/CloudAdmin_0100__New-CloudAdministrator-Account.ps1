@@ -1285,7 +1285,7 @@ Function ProcessReferralUser ($ReferralUserId, $LocalUserId, $Tier, $UserPhotoUr
                     @{ Name = 'DnsClient-PS'; Cmdlet = 'Resolve-DnsName'; Function = 'Resolve-Dns' }
                 ) 1> $null
 
-                $refUserDomainMX = (Resolve-Dns -Query (($refUserObj.mail).Split('@')[1]) -QueryType MX -Timeout (New-Timespan -Sec 30) -ContinueOnDnsError:$false -ContinueOnEmptyResponse:$false -ErrorAction SilentlyContinue).Answers
+                $refUserDomainMX = (Resolve-Dns -Query (($refUserObj.mail).Split('@')[1]) -QueryType MX -Timeout (New-TimeSpan -Seconds 30) -ContinueOnDnsError:$false -ContinueOnEmptyResponse:$false -ErrorAction SilentlyContinue).Answers
             }
             else {
                 Write-Warning '[ProcessReferralUserValidationInternalAccounts]: - Missing PowerShell module DnsClient-PS to validate MX record.'
@@ -1461,7 +1461,7 @@ Function ProcessReferralUser ($ReferralUserId, $LocalUserId, $Tier, $UserPhotoUr
                 @{ Name = 'DnsClient-PS'; Cmdlet = 'Resolve-DnsName'; Function = 'Resolve-Dns' }
             ) 1> $null
 
-            $refUserDomainMX = (Resolve-Dns -Query (($refUserObj.mail).Split('@')[1]) -QueryType MX -Timeout (New-Timespan -Sec 30) -ContinueOnDnsError:$false -ContinueOnEmptyResponse:$false -ErrorAction SilentlyContinue).Answers
+            $refUserDomainMX = (Resolve-Dns -Query (($refUserObj.mail).Split('@')[1]) -QueryType MX -Timeout (New-TimeSpan -Seconds 30) -ContinueOnDnsError:$false -ContinueOnEmptyResponse:$false -ErrorAction SilentlyContinue).Answers
         }
         else {
             Write-Warning '[ProcessReferralUserValidationExternalAccounts]: - Missing PowerShell module DnsClient-PS to validate MX record.'
