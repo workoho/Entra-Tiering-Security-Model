@@ -31,14 +31,15 @@
         # Do not flag 'cd' alias.
         PSAvoidUsingCmdletAliases = @{Whitelist = @('cd') }
 
-        # Check if your script uses cmdlets that are compatible with the following platforms
-        PSUseCompatibleCmdlets    = @{
-            Compatibility = @(
-                'desktop-5.1.14393.206-windows'
-                'core-6.1.0-linux'
-                'core-6.1.0-macos'
-                'core-6.1.0-windows'
-            )
+        # Check that commands, parameters and .NET types exist in Windows PowerShell 5.1, the runtime in Azure Automation.
+        # Tests/Test-Compatibility.ps1 uses the same profile in CI.
+        PSUseCompatibleCommands   = @{
+            Enable         = $true
+            TargetProfiles = @('win-8_x64_10.0.17763.0_5.1.17763.316_x64_4.0.30319.42000_framework')
+        }
+        PSUseCompatibleTypes      = @{
+            Enable         = $true
+            TargetProfiles = @('win-8_x64_10.0.17763.0_5.1.17763.316_x64_4.0.30319.42000_framework')
         }
 
         PSUseCompatibleSyntax     = @{

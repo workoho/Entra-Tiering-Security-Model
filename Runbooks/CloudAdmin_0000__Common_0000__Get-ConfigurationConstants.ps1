@@ -688,22 +688,22 @@ $Constants = [array] @(
         Regex         = '^.{1,2}$'
     }
     @{
-        sourceName    = "AV_CloudAdminTier0_LifecycleDelete"
+        sourceName    = "AV_CloudAdminTier1_LifecycleDelete"
         mapToVariable = 'LifecycleDelete_Tier1'
         defaultValue  = $false
     }
     @{
-        sourceName    = "AV_CloudAdminTier0_LifecycleRestoreAfterDelete"
+        sourceName    = "AV_CloudAdminTier1_LifecycleRestoreAfterDelete"
         mapToVariable = 'LifecycleRestoreAfterDelete_Tier1'
         defaultValue  = $false
     }
     @{
-        sourceName    = "AV_CloudAdminTier0_LifecycleDisable"
+        sourceName    = "AV_CloudAdminTier1_LifecycleDisable"
         mapToVariable = 'LifecycleDisable_Tier1'
         defaultValue  = $false
     }
     @{
-        sourceName    = "AV_CloudAdminTier0_LifecycleEnableAfterDisable"
+        sourceName    = "AV_CloudAdminTier1_LifecycleEnableAfterDisable"
         mapToVariable = 'LifecycleEnableAfterDisable_Tier1'
         defaultValue  = $false
     }
@@ -920,22 +920,22 @@ $Constants = [array] @(
         Regex         = '^.{1,2}$'
     }
     @{
-        sourceName    = "AV_CloudAdminTier0_LifecycleDelete"
+        sourceName    = "AV_CloudAdminTier2_LifecycleDelete"
         mapToVariable = 'LifecycleDelete_Tier2'
         defaultValue  = $false
     }
     @{
-        sourceName    = "AV_CloudAdminTier0_LifecycleRestoreAfterDelete"
+        sourceName    = "AV_CloudAdminTier2_LifecycleRestoreAfterDelete"
         mapToVariable = 'LifecycleRestoreAfterDelete_Tier2'
         defaultValue  = $false
     }
     @{
-        sourceName    = "AV_CloudAdminTier0_LifecycleDisable"
+        sourceName    = "AV_CloudAdminTier2_LifecycleDisable"
         mapToVariable = 'LifecycleDisable_Tier2'
         defaultValue  = $false
     }
     @{
-        sourceName    = "AV_CloudAdminTier0_LifecycleEnableAfterDisable"
+        sourceName    = "AV_CloudAdminTier2_LifecycleEnableAfterDisable"
         mapToVariable = 'LifecycleEnableAfterDisable_Tier2'
         defaultValue  = $false
     }
