@@ -646,10 +646,10 @@ if (
             if (-Not (
                     $DirectoryPermissions | Where-Object {
                         # Privileged Role Administrator
-                        $_.TemplateId -eq 'e8611ab8-c189-46e8-94e1-60213ab1f814' -or
+                        $_.RoleDefinition.TemplateId -eq 'e8611ab8-c189-46e8-94e1-60213ab1f814' -or
 
                         # Global Administrator
-                        $_.TemplateId -eq '62e90394-69f5-4237-9190-012177145e10'
+                        $_.RoleDefinition.TemplateId -eq '62e90394-69f5-4237-9190-012177145e10'
                     }
                 )
             ) {
@@ -728,23 +728,58 @@ if (
 #endregion ---------------------------------------------------------------------
 
 #region [COMMON] OPEN CONNECTIONS: Exchange Online -----------------------------
-./Common_0003__Confirm-MgAppPermission.ps1 -Permissions @( #TODO child runbook doesnt actually work
+./Common_0003__Confirm-MgAppPermission.ps1 -Permissions @(
     @{
         DisplayName = 'Office 365 Exchange Online'
         AppId       = '00000002-0000-0ff1-ce00-000000000000'
         AppRoles    = @(
             'Exchange.ManageAsApp'
         )
-        # Oauth2PermissionScopes = @{
-        #     Admin = @(
-        #     )
-        #     '<User-ObjectId>' = @(
-        #     )
-        # }
     }
 ) 1> $null
 
-./Common_0001__Connect-ExchangeOnline.ps1 -Organization $tenantDomain.Name -CommandName Get-EXOMailbox, Get-Mailbox, Set-Mailbox, Set-CASMailbox
+# The Exchange Online cmdlets this runbook uses, with every parameter it passes to them.
+# Keep this list in sync with the calls in ProcessReferralUser.
+$requiredExchangeParameters = @(
+    @{
+        CommandName = 'Get-EXOMailbox'
+        Parameters  = 'ExternalDirectoryObjectId'
+    }
+    @{
+        CommandName = 'Get-Mailbox'
+        Parameters  = 'Identity'
+    }
+    @{
+        CommandName = 'Set-Mailbox'
+        Parameters  = 'Identity', 'ForwardingAddress', 'ForwardingSmtpAddress', 'DeliverToMailboxAndForward', 'HiddenFromAddressListsEnabled'
+    }
+    @{
+        CommandName = 'Set-CASMailbox'
+        Parameters  = 'Identity', 'ActiveSyncEnabled', 'ImapEnabled', 'MacOutlookEnabled', 'OneWinNativeOutlookEnabled', 'OutlookMobileEnabled', 'OWAEnabled', 'OWAforDevicesEnabled', 'PopEnabled', 'UniversalOutlookEnabled', 'EwsEnabled', 'MAPIEnabled'
+    }
+)
+
+./Common_0001__Connect-ExchangeOnline.ps1 -Organization $tenantDomain.Name -CommandName @($requiredExchangeParameters | & { process { $_.CommandName } })
+#endregion ---------------------------------------------------------------------
+
+#region Required Exchange Online Permissions Validation -----------------------
+# Exchange Online offers a cmdlet parameter only to an identity whose roles cover it, so a missing permission
+# shows up as a missing parameter. Check them before an account is created, instead of failing halfway.
+$missingExchangeParameters = $requiredExchangeParameters | & {
+    process {
+        $command = Get-Command -Name $_.CommandName -ErrorAction SilentlyContinue
+        if ($null -eq $command) {
+            "$($_.CommandName) (whole cmdlet)"
+            return
+        }
+        foreach ($parameter in $_.Parameters) {
+            if (-not $command.Parameters.ContainsKey($parameter)) { "$($_.CommandName) -$parameter" }
+        }
+    }
+}
+if ($missingExchangeParameters) {
+    Throw "[RequiredExchangeOnlinePermissionsValidation]: - Exchange Online does not offer the following to this identity: $($missingExchangeParameters -join ', '). Exchange Online has not granted the identity its role yet, or grants it only in part. The project template assigns the Microsoft Entra role 'Exchange Recipient Administrator' for this."
+}
 #endregion ---------------------------------------------------------------------
 
 #region Process Referral User --------------------------------------------------
@@ -2573,7 +2608,7 @@ Function ProcessReferralUser ($ReferralUserId, $LocalUserId, $Tier, $UserPhotoUr
 
     $userExObj = $null
     do {
-        $userExObj = Get-EXOMailbox -ExternalDirectoryObjectId $UserObj.id -ErrorAction SilentlyContinue -Verbose:$false
+        $userExObj = Get-EXOMailbox -ExternalDirectoryObjectId $UserObj.id -ErrorAction SilentlyContinue -ErrorVariable getMailboxError -Verbose:$false
         if ($null -ne $userExObj) {
             Write-Verbose "[ProcessReferralUserDedicatedAccountExchangeMailbox]: - OK: Detected mailbox provisioning completion."
             $DoLoop = $false
@@ -2585,7 +2620,7 @@ Function ProcessReferralUser ($ReferralUserId, $LocalUserId, $Tier, $UserPhotoUr
             $DoLoop = $false
 
             [void] $script:returnError.Add(( ./Common_0000__Write-Error.ps1 @{
-                        Message           = "${ReferralUserId}: Mailbox provisioning timeout for $($UserObj.userPrincipalName)."
+                        Message           = "${ReferralUserId}: Mailbox provisioning timeout for $($UserObj.userPrincipalName).$(if ($getMailboxError) { " Last error: $($getMailboxError[-1].Exception.Message)" })"
                         ErrorId           = '504'
                         Category          = 'OperationTimeout'
                         TargetName        = $refUserObj.userPrincipalName
@@ -2628,6 +2663,7 @@ Function ProcessReferralUser ($ReferralUserId, $LocalUserId, $Tier, $UserPhotoUr
         Write-Warning "$($UserObj.userPrincipalName): External e-mail forwarding to $($params.ForwardingSmtpAddress)"
     }
 
+    # Every parameter here is also listed in $requiredExchangeParameters.
     try {
         Set-Mailbox @params 1> $null
         Write-Verbose "[ProcessReferralUserDedicatedAccountExchangeMailbox]: - OK: Set e-mail forwarding."
@@ -2652,20 +2688,21 @@ Function ProcessReferralUser ($ReferralUserId, $LocalUserId, $Tier, $UserPhotoUr
 
     #region Disable Mailbox Access -------------------------------------------------
     $params = @{
-        Identity                = $userExObj.identity
-        ActiveSyncEnabled       = $false
-        ImapEnabled             = $false
-        MacOutlookEnabled       = $false
-        OneWinNativeOutlook     = $false
-        OutlookMobileEnabled    = $false
-        OWAEnabled              = $false
-        OWAforDevicesEnabled    = $false
-        PopEnabled              = $false
-        UniversalOutlookEnabled = $false
-        WarningAction           = 'SilentlyContinue'
-        ErrorAction             = 'Stop'
-        Verbose                 = $false
+        Identity                   = $userExObj.identity
+        ActiveSyncEnabled          = $false
+        ImapEnabled                = $false
+        MacOutlookEnabled          = $false
+        OneWinNativeOutlookEnabled = $false
+        OutlookMobileEnabled       = $false
+        OWAEnabled                 = $false
+        OWAforDevicesEnabled       = $false
+        PopEnabled                 = $false
+        UniversalOutlookEnabled    = $false
+        WarningAction              = 'SilentlyContinue'
+        ErrorAction                = 'Stop'
+        Verbose                    = $false
     }
+    # Every parameter here is also listed in $requiredExchangeParameters.
     $nonEwsServicePlans = 'EXCHANGE_S_DESKLESS', 'EXCHANGE_S_FOUNDATION'
     try {
         if (
