@@ -1,5 +1,5 @@
 <#PSScriptInfo
-.VERSION 1.6.1
+.VERSION 1.7.0
 .GUID 03b78b5d-1e83-44bc-83ce-a5c0f101461b
 .AUTHOR Julian Pawlowski
 .COMPANYNAME Workoho GmbH
@@ -12,6 +12,11 @@
 .REQUIREDSCRIPTS CloudAdmin_0000__Common_0000__Get-ConfigurationConstants.ps1
 .EXTERNALSCRIPTDEPENDENCIES https://github.com/workoho/AzAuto-Common-Runbook-FW
 .RELEASENOTES
+    Version 1.7.0 (2026-11-08)
+    - Check right after connecting to Exchange Online that every parameter the runbook passes later is offered, and stop before an account is created with the missing ones named.
+    - Add the last error of the mailbox lookup to the timeout message.
+    - Read RoleDefinition.TemplateId in the guard for role-assignable groups, which stopped for every such group before.
+    - Pass OneWinNativeOutlookEnabled and New-TimeSpan -Seconds by their full names.
     Version 1.6.1 (2024-08-29)
     - Remove Directory.Write.Restricted checks, see MC866450
     - Add capability status filter for subscriptions validation

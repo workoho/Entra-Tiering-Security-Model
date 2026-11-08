@@ -1,5 +1,5 @@
 <#PSScriptInfo
-.VERSION 1.2.0
+.VERSION 1.2.1
 .GUID 42b14e9d-de1d-4a82-ae38-9d8c33dd56fe
 .AUTHOR Julian Pawlowski
 .COMPANYNAME Workoho GmbH
@@ -12,6 +12,8 @@
 .REQUIREDSCRIPTS
 .EXTERNALSCRIPTDEPENDENCIES https://github.com/workoho/AzAuto-Common-Runbook-FW
 .RELEASENOTES
+    Version 1.2.1 (2026-11-08)
+    - Read the Tier 1 and Tier 2 lifecycle settings from AV_CloudAdminTier1_* and AV_CloudAdminTier2_* instead of AV_CloudAdminTier0_*.
     Version 1.2.0 (2024-05-18)
     - Removed AccountTypeExtensionAttributeSuffix settings because it cannot be used properly as Microsoft Graph filter.
 #>

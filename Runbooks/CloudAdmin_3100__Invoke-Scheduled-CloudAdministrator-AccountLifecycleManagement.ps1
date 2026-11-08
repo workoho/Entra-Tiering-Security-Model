@@ -1,5 +1,5 @@
 <#PSScriptInfo
-.VERSION 1.4.0
+.VERSION 2.0.0
 .GUID ae957fef-f6c2-458d-bf37-27211dfd2640
 .AUTHOR Julian Pawlowski
 .COMPANYNAME Workoho GmbH
@@ -12,6 +12,15 @@
 .REQUIREDSCRIPTS CloudAdmin_0000__Common_0000__Get-ConfigurationConstants.ps1,CloudAdmin_0000__Common_0001__Get-CloudAdminAccountsByPrimaryAccount.ps1
 .EXTERNALSCRIPTDEPENDENCIES https://github.com/workoho/AzAuto-Common-Runbook-FW
 .RELEASENOTES
+    Version 2.0.0 (2026-11-08)
+    - Breaking: soft-delete, restore, disable and enable now take effect for every AV_CloudAdminTier<Tier>_Lifecycle* variable set to true. Before, every write request failed, because it called Common_0000__Invoke-MgGraphRequest.ps1, which the framework does not have.
+    - Breaking: Tier 1 and Tier 2 read their own AV_CloudAdminTier1_* and AV_CloudAdminTier2_* lifecycle variables instead of the Tier 0 ones.
+    - Delete the account in hand when its primary account is soft-deleted, instead of repeating the previous account's request.
+    - Require Privileged Authentication Administrator at tenant scope only while automatic restore is on, and check the Tier 1 and Tier 2 admin units.
+    - Read the user before each delete or update, and report a restore of a user that no longer exists as an error.
+    - Enable or disable a restored account in the next run, not in the run that restored it.
+    - Leave an account whose primary reference is not an object ID unchanged and report it as ToBeReviewed.
+    - Report every action in the output, DisabledToBeSoftDeleted where a soft-delete is still pending, and name the account in error messages.
     Version 1.4.0 (2024-08-29)
     - Remove Directory.Write.Restricted checks, see MC866450
 #>
